@@ -64,12 +64,12 @@ android {
     }
 
     defaultConfig {
-        namespace "itkach.aard2"
-        applicationId "io.github.muntashirakon.dictionary"
+        namespace "com.akylas.aard2"
+        applicationId "com.akylas.aard2"
         minSdk 21
         targetSdk 35
         versionCode 58
-        versionName "0.58"
+        versionName "1.0.0"
     }
 
     packagingOptions {
