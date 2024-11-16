@@ -1,21 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Aard 2</string>
     <string name="subtitle_lookup">Af-d</string>
     <string name="subtitle_bookmark">Asɣal</string>
     <string name="subtitle_history">Tamsirt</string>
     <string name="subtitle_dictionaries">Imawalen</string>
-
     <string name="action_find_dictionaries">Af-d imawalen</string>
     <string name="action_find_in_page">Af-d deg usebter</string>
     <string name="action_bookmark_article">Asɣal</string>
     <string name="action_filter">Imsizdeg</string>
     <string name="action_ascending">Igemment</string>
     <string name="action_descending">Amnusruy</string>
-
     <string name="action_sort_by_title">S uzwel</string>
     <string name="action_sort_by_time">S wakud</string>
     <string name="action_lookup">Nadi</string>
-
     <!--
     English only uses "one" and "other" for plurals.
     Other quantities are included as a fallback if some translation
@@ -29,7 +27,6 @@
         <item quantity="many">%,d n wawalen</item>
         <item quantity="other">%,d n wawalen</item>
     </plurals>
-
     <string name="action_zoom_out">Senɣes</string>
     <string name="action_zoom_in">Semɣer</string>
     <string name="action_zoom_reset">Ales awennez n zoom</string>
@@ -96,4 +93,11 @@
     <string name="action_load_remote_content">Asali n ugbur azɣaay iteddu</string>
     <string name="action_fullscreen">Agdil aččuran</string>
     <string name="setting_use_volume_for_nav">Seqded tiqeffalin n ubleɣ akken ad tinigeḍ</string>
+    <string name="application_license_url">https://gnu.org/licenses/gpl.html</string>
+    <string name="application_version">Lqem %1$s</string>
+    <string name="find_hint">Nadi deg usebter</string>
+    <string name="auto_style_title">Awurman</string>
+    <string name="find_next">Uḍfir</string>
+    <string name="find_previous">Uzwir</string>
+    <string name="setting_ui_theme_system">Akken yella unagraw</string>
 </resources>
