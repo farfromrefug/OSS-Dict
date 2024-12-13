@@ -100,4 +100,6 @@
     <string name="find_next">Uḍfir</string>
     <string name="find_previous">Uzwir</string>
     <string name="setting_ui_theme_system">Akken yella unagraw</string>
+    <string name="application_license_name">Turagt tamatut tazayezt GNU lqem wis 3</string>
+    <string name="setting_auto_paste">Asenṭeḍ awurman seg tecfawit</string>
 </resources>
