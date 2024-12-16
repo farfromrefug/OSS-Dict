@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Aard 2</string>
+    <string name="app_name">Аард 2</string>
     <string name="action_add_dictionaries">Додати</string>
     <string name="action_bookmark_article">Закладинки</string>
     <string name="action_filter">Фільтр</string>
@@ -31,7 +31,7 @@
     <string name="action_descending">За зменшенням</string>
     <string name="application_version">Версія %1$s</string>
     <string name="article_collection_selected_not_available">Вибрана стаття недоступна</string>
-    <string name="dictionaries_scanning_device">Йде пошук словників на пристрої</string>
+    <string name="dictionaries_scanning_device">Йде пошук словників на пристрої...</string>
     <string name="msg_file_too_big">Файл занадто великий</string>
     <string name="msg_no_activity_to_get_content">Немає чим відкрити файл</string>
     <string name="select_style">Вибрати стиль</string>
@@ -39,10 +39,10 @@
     <string name="subtitle_lookup">Пошук</string>
     <string name="subtitle_history">Історія</string>
     <string name="subtitle_dictionaries">Словники</string>
-    <string name="subtitle_bookmark">Закладинки</string>
+    <string name="subtitle_bookmark">Закладинків</string>
     <string name="setting_user_styles_empty">Немає стилів</string>
     <string name="setting_user_styles">Стилі користувача</string>
-    <string name="setting_user_style_confirm_forget">Видалити %1$s?</string>
+    <string name="setting_user_style_confirm_forget">Забути %1$s?</string>
     <string name="setting_remote_content_wifi">Тільки по Wi-Fi</string>
     <string name="setting_remote_content_never">Ніколи</string>
     <string name="setting_remote_content_always">Завжди</string>
@@ -57,7 +57,6 @@
     <string name="dictionaries_confirm_forget">Забути %1$s?</string>
     <string name="default_style_title">Типовий</string>
     <string name="action_zoom_reset">Початковий розмір</string>
-
     <plurals name="dict_item_count">
         <item quantity="zero">%,d записів</item>
         <item quantity="one">%,d запис</item>
@@ -66,7 +65,6 @@
         <item quantity="many">%,d записів</item>
         <item quantity="other">%,d записів</item>
     </plurals>
-
     <plurals name="confirm_delete_bookmark_count">
         <item quantity="zero">%,d закладинок</item>
         <item quantity="one">%,d закладинку</item>
@@ -75,7 +73,6 @@
         <item quantity="many">%,d закладинок</item>
         <item quantity="other">%,d закладинок</item>
     </plurals>
-
     <plurals name="confirm_delete_history_count">
         <item quantity="zero">%,d записів</item>
         <item quantity="one">%,d запис</item>
@@ -93,6 +90,11 @@
     <string name="action_fullscreen">Весь екран</string>
     <string name="setting_use_volume_for_nav">Використовувати кнопки гучності для навігації</string>
     <string name="setting_auto_paste">Авто-вставка з буфіру обміну</string>
-
-
+    <string name="find_hint">Знайти на сторінці</string>
+    <string name="find_next">Далі</string>
+    <string name="find_previous">Попередній</string>
+    <string name="setting_ui_theme_system">Слідкуйте за системою</string>
+    <string name="auto_style_title">Авто</string>
+    <string name="application_license_url">https://gnu.org/licenses/gpl.html</string>
+    <string name="application_license_name">GNU Загальна публічна ліцензія v3</string>
 </resources>
