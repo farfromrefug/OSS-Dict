@@ -75,8 +75,15 @@ public class AppPrefs extends Prefs {
         return getInstance().prefs.getBoolean("disable_history", false);
     }
 
-    public static void setDisableHistory(boolean disableJavaScript) {
-        getInstance().prefs.edit().putBoolean("disable_history", disableJavaScript).apply();
+    public static void setDisableHistory(boolean disableHistory) {
+        getInstance().prefs.edit().putBoolean("disable_history", disableHistory).apply();
         ThreadUtils.postOnBackgroundThread(() -> SlobHelper.getInstance().history.clear());
+    }
+    public static boolean disableRandomLookup() {
+        return getInstance().prefs.getBoolean("disable_random_lookup", false);
+    }
+
+    public static void setDisableRandomLookup(boolean disable) {
+        getInstance().prefs.edit().putBoolean("disable_random_lookup", disable).apply();
     }
 }

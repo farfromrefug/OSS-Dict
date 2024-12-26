@@ -51,11 +51,12 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     final static int POS_FAV_RANDOM = 3;
     final static int POS_USE_VOLUME_FOR_NAV = 4;
     final static int POS_AUTO_PASTE = 5;
-    final static int POS_DISABLE_HISTORY = 6;
-    final static int POS_DISABLE_JS = 7;
-    final static int POS_USER_STYLES = 8;
-    final static int POS_CLEAR_CACHE = 9;
-    final static int POS_ABOUT = 10;
+    final static int POS_DISABLE_RANDOM_LOOKUP = 6;
+    final static int POS_DISABLE_HISTORY = 7;
+    final static int POS_DISABLE_JS = 8;
+    final static int POS_USER_STYLES = 9;
+    final static int POS_CLEAR_CACHE = 10;
+    final static int POS_ABOUT = 11;
 
     SettingsListAdapter(Fragment fragment) {
         this.fragment = fragment;
@@ -71,7 +72,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
 
     @Override
     public int getItemCount() {
-        return 10;
+        return 11;
     }
 
     @Override
@@ -100,6 +101,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_USE_VOLUME_FOR_NAV:
             case POS_AUTO_PASTE:
             case POS_DISABLE_HISTORY:
+            case POS_DISABLE_RANDOM_LOOKUP:
             case POS_DISABLE_JS:
                 view = LayoutInflater.from(parent.getContext()).inflate(R.layout.settings_switch, parent, false);
                 break;
@@ -141,6 +143,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
                 break;
             case POS_DISABLE_HISTORY:
                 getDisableHistoryView(holder);
+                break;
+            case POS_DISABLE_RANDOM_LOOKUP:
+                getDisableRandomLookupView(holder);
                 break;
             case POS_DISABLE_JS:
                 getDisableJavaScriptView(holder);
@@ -258,6 +263,20 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         });
         view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
         toggle.setChecked(AppPrefs.disableHistory());
+    }
+    private void getDisableRandomLookupView(@NonNull ViewHolder holder) {
+        View view = holder.itemView;
+        MaterialSwitch toggle;
+        toggle = view.findViewById(R.id.setting_switch);
+        toggle.setText(R.string.setting_disable_random_lookup);
+        toggle.setOnClickListener(v -> {
+            boolean currentValue = AppPrefs.disableRandomLookup();
+            boolean newValue = !currentValue;
+            AppPrefs.setDisableRandomLookup(newValue);
+            toggle.setChecked(newValue);
+        });
+        view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
+        toggle.setChecked(AppPrefs.disableRandomLookup());
     }
 
     private void getDisableJavaScriptView(@NonNull ViewHolder holder) {
