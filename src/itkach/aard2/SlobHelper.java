@@ -136,8 +136,17 @@ public final class SlobHelper {
             slobs.clear();
             slobMap.clear();
             for (SlobDescriptor sd : dictionaries) {
+                String origSlobId = sd.id;
                 Slob s = sd.load(application);
                 if (s != null) {
+                    if (dictStore != null && !origSlobId.equals(sd.id)) {
+                        Log.d(TAG, String.format("%s has been replaced, updating dict store %s -> %s", sd.path, origSlobId, sd.id));
+                        //dictionary file has been replaced
+                        //(same file name, different slob uuid)
+                        //need to update store accordingly
+                        dictStore.delete(origSlobId);
+                        dictStore.save(sd);
+                    }
                     slobs.add(s);
                 }
             }
