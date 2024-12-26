@@ -101,27 +101,22 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     public void onPageSelected(int position) {
         if (oldPosition >= 0) {
             bottomNavigationView.getMenu().getItem(oldPosition).setChecked(false);
-        } else {
-            bottomNavigationView.getMenu().getItem(0).setChecked(false);
-        }
-
-        bottomNavigationView.getMenu().getItem(position).setChecked(true);
-        oldPosition = position;
-
-        // Hide Ime
-        if (oldPosition >= 0) {
             Fragment frag = appSectionsPagerAdapter.getItem(oldPosition);
             if (frag instanceof BlobDescriptorListFragment) {
                 ((BlobDescriptorListFragment) frag).finishActionMode();
             }
-        }
-        if (oldPosition == 0) {
+        } else {
+            bottomNavigationView.getMenu().getItem(0).setChecked(false);
             View v = this.getCurrentFocus();
             if (v != null) {
                 InputMethodManager mgr = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
                 mgr.hideSoftInputFromWindow(v.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
             }
         }
+
+        bottomNavigationView.getMenu().getItem(position).setChecked(true);
+        oldPosition = position;
+
     }
 
     @Override
