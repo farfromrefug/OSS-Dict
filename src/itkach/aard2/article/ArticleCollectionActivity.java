@@ -23,11 +23,19 @@ import androidx.core.app.TaskStackBuilder;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentStatePagerAdapter;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager.widget.PagerTitleStrip;
-import androidx.viewpager.widget.ViewPager;
+import androidx.viewpager2.adapter.FragmentStateAdapter;
+import androidx.viewpager2.widget.ViewPager2;
+
+import com.google.android.material.color.MaterialColors;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
+
 
 import java.util.Objects;
 
@@ -51,7 +59,7 @@ public class ArticleCollectionActivity extends AppCompatActivity
     private static final String TAG = ArticleCollectionActivity.class.getSimpleName();
 
     private ArticleCollectionPagerAdapter pagerAdapter;
-    private ViewPager viewPager;
+    private ViewPager2 viewPager;
     private ArticleCollectionViewModel viewModel;
     private boolean isHistory;
 
@@ -82,14 +90,17 @@ public class ArticleCollectionActivity extends AppCompatActivity
             setSupportActionBar(findViewById(R.id.toolbar));
             requireActionBar().setDisplayHomeAsUpEnabled(true);
 
-            PagerTitleStrip titleStrip = findViewById(R.id.pager_title_strip);
-            titleStrip.setVisibility(blobListWrapper.size() == 1 ? ViewGroup.GONE : ViewGroup.VISIBLE);
-            titleStrip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 10);
+            TabLayout tabs = findViewById(R.id.tabs);
+            tabs.setVisibility(
+                    blobListWrapper.size() == 1 ? ViewGroup.GONE : ViewGroup.VISIBLE);
 
             viewPager = findViewById(R.id.pager);
-            pagerAdapter = new ArticleCollectionPagerAdapter(blobListWrapper, getSupportFragmentManager());
+            viewPager.setNestedScrollingEnabled(true);
+            pagerAdapter = new ArticleCollectionPagerAdapter(blobListWrapper, this);
             viewPager.setAdapter(pagerAdapter);
-            viewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            TabLayoutMediator tabLayoutMediator = new TabLayoutMediator(tabs, viewPager, true, (tab, position1) -> tab.setText(pagerAdapter.getPageTitle(position1)));
+            tabLayoutMediator.attach();
+            viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
                 @Override
                 public void onPageScrollStateChanged(int arg0) {
                 }
@@ -101,23 +112,28 @@ public class ArticleCollectionActivity extends AppCompatActivity
                 @Override
                 public void onPageSelected(final int position) {
                     updateTitle(position);
-                    runOnUiThread(() -> {
-                        ArticleFragment fragment = pagerAdapter.getItem(position);
-                        fragment.applyTextZoomPref();
-                    });
+                    ArticleFragment fragment = pagerAdapter.getPageFragment(position);
+                    if (fragment != null) {
+                        pagerAdapter.setPrimaryItem(fragment);
+                        runOnUiThread(() -> {
+                            fragment.applyTextZoomPref();
+                        });
+                    }
 
                 }
             });
-            viewPager.setCurrentItem(position);
-            updateTitle(position);
-            pagerAdapter.registerDataSetObserver(new DataSetObserver() {
+//            viewPager.setCurrentItem(position);
+//            updateTitle(position);
+            pagerAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
                 @Override
                 public void onChanged() {
-                    if (pagerAdapter.getCount() == 0) {
+                    if (pagerAdapter.getItemCount() == 0) {
                         finish();
                     }
                 }
             });
+            viewPager.setCurrentItem(position, false);
+            updateTitle(position);
         });
         viewModel.getFailureMessageLiveData().observe(this, message -> {
             if (message != null) {
@@ -127,6 +143,7 @@ public class ArticleCollectionActivity extends AppCompatActivity
         });
         // Load adapter
         viewModel.loadBlobList(intent);
+
     }
 
     @Override
@@ -145,7 +162,7 @@ public class ArticleCollectionActivity extends AppCompatActivity
     }
 
     private void updateTitle(int position) {
-        Log.d("updateTitle", position + " count: " + pagerAdapter.getCount());
+        Log.d("updateTitle", position + " count: " + pagerAdapter.getItemCount());
         Slob.Blob blob = pagerAdapter.get(position);
         CharSequence pageTitle = pagerAdapter.getPageTitle(position);
         Log.d("updateTitle", String.valueOf(blob));
@@ -281,7 +298,7 @@ public class ArticleCollectionActivity extends AppCompatActivity
                     boolean scrolled = webView.pageDown(false);
                     if (!scrolled) {
                         int current = viewPager.getCurrentItem();
-                        if (current < pagerAdapter.getCount() - 1) {
+                        if (current < pagerAdapter.getItemCount() - 1) {
                             viewPager.setCurrentItem(current + 1);
                         }
                     }
@@ -325,8 +342,9 @@ public class ArticleCollectionActivity extends AppCompatActivity
         return super.onKeyLongPress(keyCode, event);
     }
 
-    public static class ArticleCollectionPagerAdapter extends FragmentStatePagerAdapter {
+    public static class ArticleCollectionPagerAdapter extends FragmentStateAdapter {
         private final BlobListWrapper blobListWrapper;
+        private final FragmentActivity activity;
         private final DataSetObserver observer = new DataSetObserver() {
             @Override
             public void onChanged() {
@@ -336,9 +354,10 @@ public class ArticleCollectionActivity extends AppCompatActivity
 
         private ArticleFragment primaryItem;
 
-        public ArticleCollectionPagerAdapter(@NonNull BlobListWrapper blobListWrapper, @NonNull FragmentManager fm) {
-            super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
+        public ArticleCollectionPagerAdapter(@NonNull BlobListWrapper blobListWrapper, FragmentActivity activity) {
+            super(activity);
             this.blobListWrapper = blobListWrapper;
+            this.activity = activity;
             this.blobListWrapper.registerDataSetObserver(observer);
         }
 
@@ -346,9 +365,7 @@ public class ArticleCollectionActivity extends AppCompatActivity
             blobListWrapper.unregisterDataSetObserver(observer);
         }
 
-        @Override
-        public void setPrimaryItem(@NonNull ViewGroup container, int position, @NonNull Object object) {
-            super.setPrimaryItem(container, position, object);
+        public void setPrimaryItem(@NonNull ArticleFragment object) {
             this.primaryItem = (ArticleFragment) object;
         }
 
@@ -358,7 +375,7 @@ public class ArticleCollectionActivity extends AppCompatActivity
 
         @Override
         @NonNull
-        public ArticleFragment getItem(int i) {
+        public ArticleFragment createFragment(int i) {
             ArticleFragment fragment = new ArticleFragment();
 
             Slob.Blob blob = get(i);
@@ -372,7 +389,7 @@ public class ArticleCollectionActivity extends AppCompatActivity
         }
 
         @Override
-        public int getCount() {
+        public int getItemCount() {
             return blobListWrapper.size();
         }
 
@@ -381,17 +398,20 @@ public class ArticleCollectionActivity extends AppCompatActivity
         }
 
         @Override
+        public long getItemId(int position) {
+            // we override getItemId to ensure position is the id
+            // so that we can find a fragment based on a position
+            return position;
+        }
+
+        public ArticleFragment getPageFragment(long id) {
+            return (ArticleFragment) this.activity.getSupportFragmentManager().findFragmentByTag("f" + Long.toString(id));
+        }
+
         public CharSequence getPageTitle(int position) {
             CharSequence label = blobListWrapper.getLabel(position);
             return label != null ? label : "???";
         }
 
-        //this is needed so that fragment is properly updated
-        //if underlying data changes (such as on unbookmark)
-        //https://code.google.com/p/android/issues/detail?id=19001
-        @Override
-        public int getItemPosition(@NonNull Object object) {
-            return POSITION_NONE;
-        }
     }
 }

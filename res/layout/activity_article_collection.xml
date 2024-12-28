@@ -15,22 +15,22 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize" />
 
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <androidx.viewpager.widget.ViewPager
-        android:id="@+id/pager"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
-
-        <androidx.viewpager.widget.PagerTitleStrip
-            android:id="@+id/pager_title_strip"
-            android:background="@android:drawable/divider_horizontal_dark"
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabs"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="top"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp" />
-
-    </androidx.viewpager.widget.ViewPager>
+            app:tabMode="scrollable"/>
+    </com.google.android.material.appbar.AppBarLayout>
+<!--    <androidx.core.widget.NestedScrollView-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent"-->
+<!--        android:fillViewport="true"-->
+<!--        app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">-->
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/pager"
+            android:fillViewport="true"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior"/>
+<!--    </androidx.core.widget.NestedScrollView>-->
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
