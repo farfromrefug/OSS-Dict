@@ -89,7 +89,7 @@ public class SlobServer extends Thread {
 
     public SlobServer(@NonNull String ip, int port) throws IOException {
         serverSocket = new ServerSocket(port, 100, InetAddress.getByName(ip));
-        serverSocket.setSoTimeout(5000);
+//        serverSocket.setSoTimeout(5000);
         authKey = generateAuthKey();
         setDaemon(true);
     }

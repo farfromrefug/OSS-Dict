@@ -195,7 +195,7 @@ public final class SlobHelper {
         // http://host:port/<auth>/<slob-id>/<key>?blob=<blob-id>#<fragment>
         return new Uri.Builder()
                 .scheme("http")
-                .authority(LOCALHOST + ":" + port)
+                .encodedAuthority(LOCALHOST + ":" + port)
                 .appendPath(SlobServer.getAuthKey())
                 .appendPath(blob.owner.getId().toString())
                 .appendPath(blob.key)
