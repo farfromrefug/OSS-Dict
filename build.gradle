@@ -64,7 +64,7 @@ android {
     }
 
     defaultConfig {
-        namespace "com.akylas.aard2"
+        namespace "itkach.aard2"
         applicationId "com.akylas.aard2"
         minSdk 21
         targetSdk 35
