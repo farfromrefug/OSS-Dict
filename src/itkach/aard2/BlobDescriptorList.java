@@ -45,7 +45,7 @@ public class BlobDescriptorList extends AbstractList<BlobDescriptor> {
     protected final Comparator<BlobDescriptor> lastAccessComparator;
     private final Slob.KeyComparator keyComparator;
     protected final int maxSize;
-    private final RuleBasedCollatorCompat filterCollator;
+    private final RuleBasedCollator  filterCollator;
 
     private String filter;
     private SortOrder order;
