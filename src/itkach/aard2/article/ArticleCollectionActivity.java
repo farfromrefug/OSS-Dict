@@ -7,6 +7,8 @@ import android.content.SharedPreferences;
 import android.database.DataSetObserver;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.KeyEvent;
@@ -137,8 +139,10 @@ public class ArticleCollectionActivity extends AppCompatActivity
         });
         viewModel.getFailureMessageLiveData().observe(this, message -> {
             if (message != null) {
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-                finish();
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                    finish();
+                });
             }
         });
         // Load adapter
