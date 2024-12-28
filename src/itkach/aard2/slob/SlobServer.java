@@ -102,7 +102,8 @@ public class SlobServer extends Thread {
                 Socket newSocket = serverSocket.accept();
                 Thread newClient = new EchoThread(newSocket);
                 newClient.start();
-            } catch (IOException ignore) {
+            } catch (IOException e) {
+                e.printStackTrace();
             }
             // Loop continues as long as the server runs
         }
