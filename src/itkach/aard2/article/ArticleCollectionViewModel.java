@@ -133,18 +133,20 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
         String preferredSlobId = null;
         if (lookupKey == null) {
             Uri uri = intent.getData();
-            List<String> segments = uri.getPathSegments();
-            int length = segments.size();
-            if (length > 0) {
-                lookupKey = segments.get(length - 1);
-            }
-            String slobUri = Utils.wikipediaToSlobUri(uri);
-            Log.d(TAG, String.format("Converted URI %s to slob URI %s", uri, slobUri));
-            if (slobUri != null) {
-                Slob slob = SlobHelper.getInstance().findSlob(slobUri);
-                if (slob != null) {
-                    preferredSlobId = slob.getId().toString();
-                    Log.d(TAG, String.format("Found slob %s for slob URI %s", preferredSlobId, slobUri));
+            if (uri != null) {
+                List<String> segments = uri.getPathSegments();
+                int length = segments.size();
+                if (length > 0) {
+                    lookupKey = segments.get(length - 1);
+                }
+                String slobUri = Utils.wikipediaToSlobUri(uri);
+                Log.d(TAG, String.format("Converted URI %s to slob URI %s", uri, slobUri));
+                if (slobUri != null) {
+                    Slob slob = SlobHelper.getInstance().findSlob(slobUri);
+                    if (slob != null) {
+                        preferredSlobId = slob.getId().toString();
+                        Log.d(TAG, String.format("Found slob %s for slob URI %s", preferredSlobId, slobUri));
+                    }
                 }
             }
         }
