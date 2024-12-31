@@ -19,6 +19,7 @@ import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.webkit.WebResourceErrorCompat;
 import androidx.webkit.WebSettingsCompat;
 import androidx.webkit.WebViewClientCompat;
 
@@ -389,6 +390,13 @@ public class ArticleWebView extends SearchableWebView {
         private final byte[] EMPTY_BYTE = new byte[0];
 
         private final Map<String, List<Long>> times = new HashMap<>();
+
+        @Override
+        public void onReceivedError(@NonNull WebView view, @NonNull WebResourceRequest request, @NonNull WebResourceErrorCompat error) {
+            super.onReceivedError(view, request, error);
+            Log.e(TAG, "error while loading article resource: " + request.getUrl() +": " + error.getDescription() );
+
+        }
 
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
