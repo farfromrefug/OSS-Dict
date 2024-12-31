@@ -8,5 +8,52 @@
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">127.0.0.1</domain>
         <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="true">upload.wikimedia.org</domain>
+        <domain includeSubdomains="true">commons.wikimedia.org</domain>
+        <domain includeSubdomains="true">wikimedia.org</domain>
+        <domain includeSubdomains="true">wikipedia.org</domain>
+
+        <domain includeSubdomains="true">it.wikimedia.org</domain>
+        <domain includeSubdomains="true">fr.wikimedia.org</domain>
+        <domain includeSubdomains="true">en.wikimedia.org</domain>
+        <domain includeSubdomains="true">ja.wikimedia.org</domain>
+        <domain includeSubdomains="true">de.wikimedia.org</domain>
+        <domain includeSubdomains="true">es.wikimedia.org</domain>
+        <domain includeSubdomains="true">fa.wikimedia.org</domain>
+        <domain includeSubdomains="true">nl.wikimedia.org</domain>
+        <domain includeSubdomains="true">pl.wikimedia.org</domain>
+        <domain includeSubdomains="true">pt.wikimedia.org</domain>
+        <domain includeSubdomains="true">ru.wikimedia.org</domain>
+        <domain includeSubdomains="true">ok.wikimedia.org</domain>
+        <domain includeSubdomains="true">zh.wikimedia.org</domain>
+
+        <domain includeSubdomains="true">it.wikipedia.org</domain>
+        <domain includeSubdomains="true">fr.wikipedia.org</domain>
+        <domain includeSubdomains="true">en.wikipedia.org</domain>
+        <domain includeSubdomains="true">ja.wikipedia.org</domain>
+        <domain includeSubdomains="true">de.wikipedia.org</domain>
+        <domain includeSubdomains="true">es.wikipedia.org</domain>
+        <domain includeSubdomains="true">fa.wikipedia.org</domain>
+        <domain includeSubdomains="true">nl.wikipedia.org</domain>
+        <domain includeSubdomains="true">pl.wikipedia.org</domain>
+        <domain includeSubdomains="true">pt.wikipedia.org</domain>
+        <domain includeSubdomains="true">ru.wikipedia.org</domain>
+        <domain includeSubdomains="true">ok.wikipedia.org</domain>
+        <domain includeSubdomains="true">zh.wikipedia.org</domain>
+
+        <domain includeSubdomains="true">it.wiktionary.org</domain>
+        <domain includeSubdomains="true">fr.wiktionary.org</domain>
+        <domain includeSubdomains="true">en.wiktionary.org</domain>
+        <domain includeSubdomains="true">ja.wiktionary.org</domain>
+        <domain includeSubdomains="true">de.wiktionary.org</domain>
+        <domain includeSubdomains="true">es.wiktionary.org</domain>
+        <domain includeSubdomains="true">fa.wiktionary.org</domain>
+        <domain includeSubdomains="true">nl.wiktionary.org</domain>
+        <domain includeSubdomains="true">pl.wiktionary.org</domain>
+        <domain includeSubdomains="true">pt.wiktionary.org</domain>
+        <domain includeSubdomains="true">ru.wiktionary.org</domain>
+        <domain includeSubdomains="true">ok.wiktionary.org</domain>
+        <domain includeSubdomains="true">zh.wiktionary.org</domain>
+
     </domain-config>
 </network-security-config>
