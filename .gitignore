@@ -11,3 +11,7 @@ project.properties
 local.properties
 README.html
 .DS_Store
+/.env
+/vendor
+/release
+/certs
