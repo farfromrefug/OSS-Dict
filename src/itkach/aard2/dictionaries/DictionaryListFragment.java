@@ -78,6 +78,8 @@ public class DictionaryListFragment extends BaseListFragment {
         if (activity instanceof MainActivity) {
             ((MainActivity) activity).displayFab(R.drawable.ic_add, R.string.action_add_dictionaries,
                     v -> selectDictionaryFiles());
+            ((MainActivity) activity).requireActionBar().setTitle(R.string.subtitle_dictionaries);
+            ((MainActivity) activity).requireActionBar().setSubtitle(null);
         }
     }
 

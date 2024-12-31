@@ -65,6 +65,8 @@ public class LookupFragment extends BaseListFragment implements LookupListener, 
         super.onResume();
         FragmentActivity activity = requireActivity();
         if (activity instanceof MainActivity) {
+            ((MainActivity)activity).requireActionBar().setTitle(null);
+            ((MainActivity)activity).requireActionBar().setSubtitle(R.string.subtitle_lookup);
             if (AppPrefs.disableRandomLookup()) {
                 ((MainActivity) activity).hideFab();
             } else {
@@ -173,7 +175,6 @@ public class LookupFragment extends BaseListFragment implements LookupListener, 
 
     @Override
     public boolean onQueryTextChange(String newText) {
-        Log.d(TAG, "new query text: " + newText);
         if (viewModel != null) {
             viewModel.lookup(newText);
         }

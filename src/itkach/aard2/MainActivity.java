@@ -11,8 +11,10 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
 import androidx.viewpager.widget.ViewPager;
@@ -20,6 +22,8 @@ import androidx.viewpager.widget.ViewPager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationBarView;
+
+import java.util.Objects;
 
 import itkach.aard2.article.ArticleCollectionActivity;
 import itkach.aard2.dictionaries.DictionaryListFragment;
@@ -37,6 +41,11 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     private BottomNavigationView bottomNavigationView;
     private FloatingActionButton fab;
     private int oldPosition = -1;
+
+    @NonNull
+    public ActionBar requireActionBar() {
+        return Objects.requireNonNull(getSupportActionBar());
+    }
 
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -193,6 +202,17 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         String getPreferencesNS() {
             return "bookmarks";
         }
+
+
+        @Override
+        public void onResume() {
+            super.onResume();
+            FragmentActivity activity = requireActivity();
+            if (activity instanceof MainActivity) {
+                ((MainActivity) activity).requireActionBar().setTitle(R.string.subtitle_bookmark);
+                ((MainActivity) activity).requireActionBar().setSubtitle(null);
+            }
+        }
     }
 
     public static class HistoryFragment extends BlobDescriptorListFragment {
@@ -224,6 +244,17 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         @Override
         String getPreferencesNS() {
             return "history";
+        }
+
+
+        @Override
+        public void onResume() {
+            super.onResume();
+            FragmentActivity activity = requireActivity();
+            if (activity instanceof MainActivity) {
+                ((MainActivity) activity).requireActionBar().setTitle(R.string.subtitle_history);
+                ((MainActivity) activity).requireActionBar().setSubtitle(null);
+            }
         }
 
     }

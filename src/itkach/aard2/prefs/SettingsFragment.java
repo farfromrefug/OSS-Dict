@@ -13,11 +13,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import java.io.IOException;
 import java.io.InputStream;
 
+import itkach.aard2.MainActivity;
 import itkach.aard2.R;
 import itkach.aard2.utils.Utils;
 import itkach.aard2.widget.RecyclerView;
@@ -82,5 +84,15 @@ public class SettingsFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         recyclerView.setLayoutManager(new LinearLayoutManager(view.getContext(), LinearLayoutManager.VERTICAL, false));
         recyclerView.setAdapter(new SettingsListAdapter(this));
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        FragmentActivity activity = requireActivity();
+        if (activity instanceof MainActivity) {
+            ((MainActivity) activity).requireActionBar().setTitle(R.string.subtitle_settings);
+            ((MainActivity) activity).requireActionBar().setSubtitle(null);
+        }
     }
 }
