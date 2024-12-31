@@ -1,0 +1,15 @@
+**Aardict** is an offline dictionary reader. It is fork of Aard 2 with new Material design and update features
+
+**Features**
+
+* Lookup queries are punctuation, diacritics and case
+insensitive.
+* Bookmarks and History
+* Dictionary Management
+* Article Appearance: add your custom style sheets
+* Math: Mathematical formuals are scalable, styleable, beautiful on any screen
+* Random Article
+* Volume Buttons Navigation
+* Fullscreen Mode
+* Clipboard Auto-Paste
+* External Link Sharing
