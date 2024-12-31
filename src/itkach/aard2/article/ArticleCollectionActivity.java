@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.DataSetObserver;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,12 +17,15 @@ import android.view.MenuItem;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NavUtils;
 import androidx.core.app.TaskStackBuilder;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -67,6 +71,7 @@ public class ArticleCollectionActivity extends AppCompatActivity
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         Utils.updateNightMode();
         setContentView(R.layout.activity_article_collection_loading);
@@ -136,6 +141,15 @@ public class ArticleCollectionActivity extends AppCompatActivity
             });
             viewPager.setCurrentItem(position, false);
             updateTitle(position);
+
+            ViewCompat.setOnApplyWindowInsetsListener(viewPager, (v, insets) -> {
+                Insets bars = insets.getInsets(
+                        WindowInsetsCompat.Type.systemBars()
+                                | WindowInsetsCompat.Type.displayCutout()
+                );
+                v.setPadding(bars.left, 0, bars.right, (ArticleCollectionPrefs.isFullscreen()) ? 0 : bars.bottom);
+                return WindowInsetsCompat.CONSUMED;
+            });
         });
         viewModel.getFailureMessageLiveData().observe(this, message -> {
             if (message != null) {
@@ -166,10 +180,8 @@ public class ArticleCollectionActivity extends AppCompatActivity
     }
 
     private void updateTitle(int position) {
-        Log.d("updateTitle", position + " count: " + pagerAdapter.getItemCount());
         Slob.Blob blob = pagerAdapter.get(position);
         CharSequence pageTitle = pagerAdapter.getPageTitle(position);
-        Log.d("updateTitle", String.valueOf(blob));
         ActionBar actionBar = requireActionBar();
         if (blob != null) {
             String dictLabel = blob.owner.getTags().get(SlobTags.TAG_LABEL);
