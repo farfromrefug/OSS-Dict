@@ -46,13 +46,11 @@
                 <action android:name="aard2.lookup" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="text/plain" />
             </intent-filter>
             <intent-filter>
                 <action android:name="colordict.intent.action.SEARCH" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="text/plain" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
