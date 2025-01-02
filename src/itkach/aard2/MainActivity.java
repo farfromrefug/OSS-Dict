@@ -116,6 +116,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             }
         } else {
             bottomNavigationView.getMenu().getItem(0).setChecked(false);
+        }
+        if (position > 0) {
             View v = this.getCurrentFocus();
             if (v != null) {
                 InputMethodManager mgr = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
@@ -149,11 +151,9 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     public void onBackPressed() {
         int currentItem = viewPager.getCurrentItem();
         Fragment frag = appSectionsPagerAdapter.getItem(currentItem);
-        Log.d(TAG, "current tab: " + currentItem);
         if (frag instanceof BlobDescriptorListFragment) {
             BlobDescriptorListFragment bdFrag = (BlobDescriptorListFragment) frag;
             if (bdFrag.isFilterExpanded()) {
-                Log.d(TAG, "Filter is expanded");
                 bdFrag.collapseFilter();
                 return;
             }
