@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Aardict</string>
+    <string name="app_name" translatable="false">OSSDict</string>
     <string name="subtitle_lookup">Lookup</string>
     <string name="subtitle_bookmark">Bookmarks</string>
     <string name="subtitle_history">History</string>
@@ -121,4 +121,5 @@
     <string name="action_open_random_article">Random article</string>
     <string name="setting_disable_history">Disable history</string>
     <string name="setting_disable_random_lookup">Disable random lookup</string>
+    <string name="setting_remote_content_cache_first">Only load remote content if not cached already</string>
 </resources>

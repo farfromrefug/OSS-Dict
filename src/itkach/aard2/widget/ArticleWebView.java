@@ -115,6 +115,11 @@ public class ArticleWebView extends SearchableWebView {
         settings.setJavaScriptEnabled(!ArticleViewPrefs.disableJavaScript());
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
+
+        // always load from cache if possible to prevent remote access as much as possible
+        if (ArticleViewPrefs.loadRemoteContentOnlyIfNotCached()) {
+            settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        }
         if (ArticleViewPrefs.enableForceDark()) {
             WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true);
         }
@@ -176,18 +181,18 @@ public class ArticleWebView extends SearchableWebView {
             return true;
         }
         String prefValue = ArticleViewPrefs.getRemoteContentPreference();
-        if (prefValue.equals(ArticleViewPrefs.PREF_REMOTE_CONTENT_ALWAYS)) {
-            return true;
-        }
-        if (prefValue.equals(ArticleViewPrefs.PREF_REMOTE_CONTENT_NEVER)) {
-            return false;
-        }
-        if (prefValue.equals(ArticleViewPrefs.PREF_REMOTE_CONTENT_WIFI)) {
-            NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
-            if (networkInfo != null) {
-                int networkType = networkInfo.getType();
-                return networkType == ConnectivityManager.TYPE_WIFI || networkType == ConnectivityManager.TYPE_ETHERNET;
-            }
+        switch (prefValue) {
+            case ArticleViewPrefs.PREF_REMOTE_CONTENT_ALWAYS:
+                return true;
+            case ArticleViewPrefs.PREF_REMOTE_CONTENT_NEVER:
+                return false;
+            case ArticleViewPrefs.PREF_REMOTE_CONTENT_WIFI:
+                NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+                if (networkInfo != null) {
+                    int networkType = networkInfo.getType();
+                    return networkType == ConnectivityManager.TYPE_WIFI || networkType == ConnectivityManager.TYPE_ETHERNET;
+                }
+                break;
         }
         return false;
     }

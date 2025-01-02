@@ -9,6 +9,7 @@ import java.util.TreeSet;
 
 public class ArticleViewPrefs extends Prefs {
     private static final String PREF_REMOTE_CONTENT = "remoteContent";
+    private static final String PREF_REMOTE_CONTENT_CACHE_FIRST = "remoteContentCacheFirst";
     private static final String PREF_TEXT_ZOOM = "textZoom";
     private static final String PREF_STYLE_PREFIX = "style.";
     private static final String PREF_STYLE_AVAILABLE_PREFIX = "style.available.";
@@ -82,5 +83,14 @@ public class ArticleViewPrefs extends Prefs {
 
     public static void setAvailableStyles(@NonNull String slobId, Set<String> availableStyles) {
         getInstance().prefs.edit().putStringSet(PREF_STYLE_AVAILABLE_PREFIX + slobId, availableStyles).apply();
+    }
+
+
+    public static boolean loadRemoteContentOnlyIfNotCached() {
+        return getInstance().prefs.getBoolean(PREF_REMOTE_CONTENT_CACHE_FIRST, true);
+    }
+
+    public static void setLoadRemoteContentOnlyIfNotCached(boolean value) {
+        getInstance().prefs.edit().putBoolean(PREF_REMOTE_CONTENT_CACHE_FIRST, value).apply();
     }
 }

@@ -48,15 +48,16 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     final static int POS_UI_THEME = 0;
     final static int POS_FORCE_DARK = 1;
     final static int POS_REMOTE_CONTENT = 2;
-    final static int POS_FAV_RANDOM = 3;
-    final static int POS_USE_VOLUME_FOR_NAV = 4;
-    final static int POS_AUTO_PASTE = 5;
-    final static int POS_DISABLE_RANDOM_LOOKUP = 6;
-    final static int POS_DISABLE_HISTORY = 7;
-    final static int POS_DISABLE_JS = 8;
-    final static int POS_USER_STYLES = 9;
-    final static int POS_CLEAR_CACHE = 10;
-    final static int POS_ABOUT = 11;
+    final static int POS_REMOTE_CONTENT_CACHE = 3;
+    final static int POS_FAV_RANDOM = 4;
+    final static int POS_USE_VOLUME_FOR_NAV = 5;
+    final static int POS_AUTO_PASTE = 6;
+    final static int POS_DISABLE_RANDOM_LOOKUP = 7;
+    final static int POS_DISABLE_HISTORY = 8;
+    final static int POS_DISABLE_JS = 9;
+    final static int POS_USER_STYLES = 10;
+    final static int POS_CLEAR_CACHE = 11;
+    final static int POS_ABOUT = 12;
 
     SettingsListAdapter(Fragment fragment) {
         this.fragment = fragment;
@@ -103,6 +104,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_DISABLE_HISTORY:
             case POS_DISABLE_RANDOM_LOOKUP:
             case POS_DISABLE_JS:
+            case POS_REMOTE_CONTENT_CACHE:
                 view = LayoutInflater.from(parent.getContext()).inflate(R.layout.settings_switch, parent, false);
                 break;
             case POS_USER_STYLES:
@@ -131,6 +133,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
                 break;
             case POS_REMOTE_CONTENT:
                 getRemoteContentSettingsView(holder);
+                break;
+            case POS_REMOTE_CONTENT_CACHE:
+                getRemoteContentCacheView(holder);
                 break;
             case POS_FAV_RANDOM:
                 getFavRandomSwitchView(holder);
@@ -205,6 +210,20 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         });
         view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
         toggle.setChecked(ArticleViewPrefs.enableForceDark());
+    }
+    private void getRemoteContentCacheView(@NonNull ViewHolder holder) {
+        View view = holder.itemView;
+        MaterialSwitch toggle = view.findViewById(R.id.setting_switch);
+        toggle.setText(R.string.setting_remote_content_cache_first);
+        toggle.setEnabled(ArticleViewPrefs.loadRemoteContentOnlyIfNotCached());
+        toggle.setOnClickListener(v -> {
+            boolean currentValue = ArticleViewPrefs.loadRemoteContentOnlyIfNotCached();
+            boolean newValue = !currentValue;
+            ArticleViewPrefs.setLoadRemoteContentOnlyIfNotCached(newValue);
+            toggle.setChecked(newValue);
+        });
+        view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
+        toggle.setChecked(ArticleViewPrefs.loadRemoteContentOnlyIfNotCached());
     }
 
     private void getFavRandomSwitchView(@NonNull ViewHolder holder) {
