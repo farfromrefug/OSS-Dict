@@ -13,7 +13,23 @@ repositories {
 android {
     compileSdk 35
 
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        namespace "itkach.aard2"
+        applicationId "com.akylas.aard2"
+        minSdk 21
+        targetSdk 35
+        versionCode 61
+        versionName "1.0.3"
+    }
+
+
     packagingOptions {
+        exclude 'META-INF/*.version'
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/NOTICE'
         project("slobj").file("exclude.txt").eachLine {
@@ -24,6 +40,7 @@ android {
                 }
         }
     }
+
 
 
     lintOptions {
@@ -62,22 +79,14 @@ android {
             }
         }
     }
-
-    defaultConfig {
-        namespace "itkach.aard2"
-        applicationId "com.akylas.aard2"
-        minSdk 21
-        targetSdk 35
-        versionCode 61
-        versionName "1.0.3"
-    }
-
-    packagingOptions {
-        exclude 'META-INF/*.version'
-    }
-
     buildFeatures {
         buildConfig true
+    }
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs.
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles.
+        includeInBundle = false
     }
 }
 
