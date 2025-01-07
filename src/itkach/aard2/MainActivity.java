@@ -1,18 +1,24 @@
 package itkach.aard2;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 
+import androidx.activity.EdgeToEdge;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -48,6 +54,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     }
 
     public void onCreate(@Nullable Bundle savedInstanceState) {
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         Utils.updateNightMode();
         setContentView(R.layout.activity_main);
@@ -70,6 +77,23 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         } else if (SlobHelper.getInstance().dictionaries.isEmpty()) {
             viewPager.setCurrentItem(3);
         }
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//            getWindow().setNavigationBarContrastEnforced(false);
+//        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.layout), (v, insets) -> {
+            Insets bars = insets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+            );
+            ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            mlp.leftMargin = bars.left;
+            mlp.bottomMargin = bars.bottom;
+            mlp.topMargin = bars.top;
+            mlp.rightMargin = bars.right;
+            v.setLayoutParams(mlp);
+            return WindowInsetsCompat.CONSUMED;
+        });
+
     }
 
     @Override
