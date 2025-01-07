@@ -142,12 +142,17 @@ public class ArticleCollectionActivity extends AppCompatActivity
             viewPager.setCurrentItem(position, false);
             updateTitle(position);
 
-            ViewCompat.setOnApplyWindowInsetsListener(viewPager, (v, insets) -> {
+            ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.layout), (v, insets) -> {
                 Insets bars = insets.getInsets(
                         WindowInsetsCompat.Type.systemBars()
                                 | WindowInsetsCompat.Type.displayCutout()
                 );
-                v.setPadding(bars.left, 0, bars.right, (ArticleCollectionPrefs.isFullscreen()) ? 0 : bars.bottom);
+                ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+                mlp.leftMargin = bars.left;
+                mlp.bottomMargin = (ArticleCollectionPrefs.isFullscreen()) ? 0 : bars.bottom;
+                mlp.topMargin = (ArticleCollectionPrefs.isFullscreen()) ? 0 : bars.top;
+                mlp.rightMargin = bars.right;
+                v.setLayoutParams(mlp);
                 return WindowInsetsCompat.CONSUMED;
             });
         });
@@ -162,6 +167,18 @@ public class ArticleCollectionActivity extends AppCompatActivity
         // Load adapter
         viewModel.loadBlobList(intent);
 
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.layout), (v, insets) -> {
+            Insets bars = insets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+            );
+            ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            mlp.leftMargin = bars.left;
+            mlp.bottomMargin = (ArticleCollectionPrefs.isFullscreen()) ? 0 : bars.bottom;
+            mlp.topMargin = bars.top;
+            mlp.rightMargin = bars.right;
+            v.setLayoutParams(mlp);
+            return WindowInsetsCompat.CONSUMED;
+        });
     }
 
     @Override
