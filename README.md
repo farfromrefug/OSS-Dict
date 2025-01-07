@@ -1,9 +1,9 @@
-# Aardict for Android
-  Aardict is a fork of [Aard 2 for Android](https://github.com/itkach/aard2-android). It
+# OSS-Dict for Android
+  OSS-Dict is a fork of [Aard 2 for Android](https://github.com/itkach/aard2-android). It
   comes with Material design 3 interface, bug fixes and improvements.
 
    
-<h2 align="center">Enjoying Aardict?</h2>
+<h2 align="center">Enjoying OSS-Dict?</h2>
 <p align="center">Please consider making a small donation to help fund the project. Developing an application, especially one that is open source and completely free, takes a lot of time and effort.
 <br>
 <br>
@@ -14,7 +14,7 @@
 
 ## Download
 
-   - [Aardict](https://github.com/farfromrefug/aardict/releases)
+   - [OSS-Dict](https://github.com/farfromrefug/OSS-Dict/releases)
    - [Dictionaries](https://github.com/itkach/slob/wiki/Dictionaries)
 
 
@@ -185,11 +185,11 @@ parameter [SearchManager.QUERY](http://developer.android.com/reference/android/a
 
 ## Translation
 
-### Languages: [<img align="right" src="https://hosted.weblate.org/widgets/aardict/-/287x66-white.png" alt="Übersetzungsstatus" />](https://hosted.weblate.org/engage/aardict/?utm_source=widget)
+### Languages: [<img align="right" src="https://hosted.weblate.org/widgets/ossdict/-/287x66-white.png" alt="Übersetzungsstatus" />](https://hosted.weblate.org/engage/ossdict/?utm_source=widget)
 
-[<img src="https://hosted.weblate.org/widgets/aardict/-/multi-auto.svg" alt="Übersetzungsstatus" />](https://hosted.weblate.org/engage/aardict/)
+[<img src="https://hosted.weblate.org/widgets/ossdict/-/multi-auto.svg" alt="Übersetzungsstatus" />](https://hosted.weblate.org/engage/ossdict/)
 
-The Translations are hosted by [Weblate.org](https://hosted.weblate.org/engage/aardict/).
+The Translations are hosted by [Weblate.org](https://hosted.weblate.org/engage/ossdict/).
 
 
 <p align="center">
