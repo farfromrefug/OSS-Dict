@@ -1,4 +1,4 @@
-**Aardict** is an offline dictionary reader. It is fork of Aard 2 with new Material design and update features
+**OSS-Dict** is an offline dictionary reader. It is fork of Aard 2 with new Material design and updated features
 
 **Features**
 

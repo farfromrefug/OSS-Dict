@@ -21,7 +21,7 @@
             android:layout_height="wrap_content">
 
             <androidx.appcompat.widget.AppCompatImageView
-                android:src="@drawable/aard2"
+                android:src="@drawable/dictionary"
                 android:id="@+id/empty_icon"
                 android:layout_gravity="center"
                 android:layout_width="45dp"
