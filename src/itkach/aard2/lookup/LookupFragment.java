@@ -16,6 +16,9 @@ import androidx.appcompat.widget.SearchView;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProvider;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 import itkach.aard2.Application;
 import itkach.aard2.BaseListFragment;
 import itkach.aard2.MainActivity;
@@ -29,6 +32,7 @@ import itkach.slob.Slob;
 public class LookupFragment extends BaseListFragment implements LookupListener, SearchView.OnQueryTextListener {
     private final static String TAG = LookupFragment.class.getSimpleName();
 
+    private Timer timer;
     private SearchView searchView;
     private LookupResultAdapter listAdapter;
     private LookupViewModel viewModel;
@@ -95,6 +99,7 @@ public class LookupFragment extends BaseListFragment implements LookupListener, 
 
     @Override
     public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        timer = new Timer();
         inflater.inflate(R.menu.lookup, menu);
         MenuItem lookupMenu = menu.findItem(R.id.action_lookup);
         View filterActionView = lookupMenu.getActionView();
@@ -173,10 +178,27 @@ public class LookupFragment extends BaseListFragment implements LookupListener, 
         return false;
     }
 
+    TimerTask scheduledLookup = null;
     @Override
     public boolean onQueryTextChange(String newText) {
-        if (viewModel != null) {
-            viewModel.lookup(newText);
+//        Log.d(TAG, "new query text: " + newText);
+        TimerTask doLookup = new TimerTask() {
+            @Override
+            public void run() {
+                final String query = searchView.getQuery().toString();
+                if (viewModel != null) {
+                    viewModel.lookup(query);
+                }
+                scheduledLookup = null;
+            }
+        };
+        final String query = searchView.getQuery().toString();
+        if (!AppPrefs.getLastQuery().equals(query)) {
+            if (scheduledLookup != null) {
+                scheduledLookup.cancel();
+            }
+            scheduledLookup = doLookup;
+            timer.schedule(doLookup, 500);
         }
         return true;
     }
