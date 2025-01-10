@@ -17,7 +17,6 @@
         <item quantity="one">%,d element</item>
         <item quantity="other">%,d elementer</item>
     </plurals>
-
     <string name="action_zoom_out">Forminsk</string>
     <string name="action_zoom_in">Forstørr</string>
     <string name="action_zoom_reset">Tilbakestill forstørrelsesnivå</string>
@@ -46,7 +45,6 @@
     <string name="main_empty_history">Ingen historikk</string>
     <string name="main_empty_dictionaries">Ingen ordlister</string>
     <string name="delete">Slett</string>
-
     <plurals name="confirm_delete_bookmark_count">
         <item quantity="one">%,d bokmerke</item>
         <item quantity="other">%,d bokmerker</item>
@@ -55,7 +53,6 @@
         <item quantity="one">%,d historikkoppføring</item>
         <item quantity="other">%,d historikkoppføringer</item>
     </plurals>
-
     <string name="blob_descriptor_confirm_delete">Delete %1$s?</string>
     <string name="msg_failed_to_read_file">Klarte ikke å lese fil</string>
     <string name="msg_file_too_big">Fila er for stor</string>
@@ -80,5 +77,4 @@
     <string name="auto_style_title">Auto</string>
     <string name="action_fullscreen">Fullskjerm</string>
     <string name="setting_use_volume_for_nav">Bruk lydstyrkeknapper for navigasjon</string>
-
 </resources>
