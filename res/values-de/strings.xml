@@ -1,25 +1,28 @@
-﻿<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OSSDict</string>
     <string name="subtitle_lookup">Finden</string>
     <string name="subtitle_bookmark">Lesezeichen</string>
     <string name="subtitle_history">Verlauf</string>
     <string name="subtitle_dictionaries">Wörterbücher</string>
-
     <string name="action_find_dictionaries">Finde Wörterbücher</string>
     <string name="action_find_in_page">Suche in Seite</string>
     <string name="action_bookmark_article">Lesezeichen</string>
     <string name="action_filter">Filter</string>
     <string name="action_ascending">Aufsteigend</string>
     <string name="action_descending">Absteigend</string>
-
     <string name="action_sort_by_title">Nach Titel</string>
     <string name="action_sort_by_time">Nach Zeit</string>
     <string name="action_lookup">Nachschlagen</string>
-
+    <!--
+    English only uses "one" and "other" for plurals.
+    Other quantities are included as a fallback if some translation
+    is missing a quantity used in that language, otherwise the app will crash
+    -->
     <plurals name="dict_item_count">
         <item quantity="one">%,d Stichwort</item>
         <item quantity="other">%,d Stichworte</item>
     </plurals>
-
     <string name="action_zoom_out">Verkleinern</string>
     <string name="action_zoom_in">Vergrössern</string>
     <string name="action_zoom_reset">Vergrösserung zurücksetzen</string>
@@ -69,14 +72,20 @@
     <string name="action_goto_parent_dir">Hoch</string>
     <string name="action_reload_directory">Neu laden</string>
     <string name="msg_dictionary_already_open">Schon geöffnet</string>
-    <string name="msg_dictionary_added">Wörterbuch hinzugefügt von %1$s</string>
+    <string name="msg_dictionary_added">Wörterbuch von %1$s hinzugefügt</string>
     <string name="setting_fav_random_search">Für zufällige Suche nur favorisierte Wörterbücher verwenden</string>
     <string name="article_collection_invalid_link">Ungültiger Link</string>
-    <string name="setting_ui_theme">Benutzeroberfläche</string>
+    <string name="setting_ui_theme">Benutzeroberflächenstil</string>
     <string name="setting_ui_theme_light">Hell</string>
     <string name="setting_ui_theme_dark">Dunkel</string>
     <string name="action_load_remote_content">Lade externen Inhalt</string>
     <string name="action_fullscreen">Vollbild</string>
     <string name="setting_use_volume_for_nav">Lautstärketasten für die Navigation verwenden</string>
     <string name="find_hint">Suche in Seite</string>
+    <string name="setting_auto_paste">Automatisch aus der Zwischenablage einfügen</string>
+    <string name="application_version">Version %1$s</string>
+    <string name="setting_ui_theme_system">System folgen</string>
+    <string name="auto_style_title">Automatisch</string>
+    <string name="find_next">Weiter</string>
+    <string name="find_previous">Zurück</string>
 </resources>

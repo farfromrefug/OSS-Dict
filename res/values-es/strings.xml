@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">OSSDict</string>
     <string name="subtitle_lookup">Búsqueda</string>
     <string name="subtitle_bookmark">Marcadores</string>
     <string name="subtitle_history">Historial</string>
@@ -17,7 +18,6 @@
         <item quantity="one">%,d elemento</item>
         <item quantity="other">%,d elementos</item>
     </plurals>
-
     <string name="action_zoom_out">Reducir</string>
     <string name="action_zoom_in">Ampliar</string>
     <string name="action_zoom_reset">Reestablecer ampliación</string>
@@ -46,7 +46,6 @@
     <string name="main_empty_history">Sin historial</string>
     <string name="main_empty_dictionaries">Sin diccionarios</string>
     <string name="delete">Borrar</string>
-
     <plurals name="confirm_delete_bookmark_count">
         <item quantity="one">%,d marcador</item>
         <item quantity="other">%,d marcadores</item>
@@ -55,7 +54,6 @@
         <item quantity="one">%,d registro de historial</item>
         <item quantity="other">%,d registros de historial</item>
     </plurals>
-
     <string name="blob_descriptor_confirm_delete">Borrars %1$s?</string>
     <string name="msg_failed_to_read_file">Error al leer el archivo</string>
     <string name="msg_file_too_big">Archivo demasiado grande</string>
@@ -83,5 +81,6 @@
     <string name="find_hint">Buscar en la página</string>
     <string name="find_next">Siguiente</string>
     <string name="find_previous">Anterior"</string>
-
+    <string name="setting_ui_theme_system">Sistema</string>
+    <string name="setting_auto_paste">Pegar automáticamente desde el portapapeles</string>
 </resources>

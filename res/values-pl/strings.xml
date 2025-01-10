@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">OSSDict</string>
     <string name="subtitle_lookup">Wyszukiwanie</string>
     <string name="subtitle_bookmark">Zakładki</string>
     <string name="subtitle_history">Historia</string>
@@ -19,7 +20,6 @@
         <item quantity="many">%,d elementów</item>
         <item quantity="other">%,d elementów</item>
     </plurals>
-
     <string name="action_zoom_out">Oddal</string>
     <string name="action_zoom_in">Przybliż</string>
     <string name="action_zoom_reset">Domyślne powiększenie </string>
@@ -48,7 +48,6 @@
     <string name="main_empty_history">Brak historii</string>
     <string name="main_empty_dictionaries">Brak słowników</string>
     <string name="delete">Usuń</string>
-
     <plurals name="confirm_delete_bookmark_count">
         <item quantity="one">%,d zakładkę</item>
         <item quantity="few">%,d zakładki</item>
@@ -61,7 +60,6 @@
         <item quantity="many">%,d wpisów z historii</item>
         <item quantity="other">%,d wpisów z historii</item>
     </plurals>
-
     <string name="blob_descriptor_confirm_delete">Usunąć %1$s?</string>
     <string name="msg_failed_to_read_file">Nie udało się odczytać pliku</string>
     <string name="msg_file_too_big">Plik jest za duży</string>
@@ -89,4 +87,6 @@
     <string name="find_hint">Znajdź na stronie</string>
     <string name="find_next">Następne</string>
     <string name="find_previous">Poprzednie</string>
+    <string name="setting_ui_theme_system">Zgodny z systemem</string>
+    <string name="setting_auto_paste">Automatyczne wklejanie ze schowka</string>
 </resources>

@@ -1,20 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="subtitle_lookup">Af-d</string>
-    <string name="subtitle_bookmark">Asɣal</string>
+    <string name="subtitle_bookmark">Ticraḍ</string>
     <string name="subtitle_history">Tamsirt</string>
     <string name="subtitle_dictionaries">Imawalen</string>
-
     <string name="action_find_dictionaries">Af-d imawalen</string>
     <string name="action_find_in_page">Af-d deg usebter</string>
     <string name="action_bookmark_article">Asɣal</string>
     <string name="action_filter">Imsizdeg</string>
     <string name="action_ascending">Igemment</string>
     <string name="action_descending">Amnusruy</string>
-
     <string name="action_sort_by_title">S uzwel</string>
     <string name="action_sort_by_time">S wakud</string>
     <string name="action_lookup">Nadi</string>
-
+    <!--
+    English only uses "one" and "other" for plurals.
+    Other quantities are included as a fallback if some translation
+    is missing a quantity used in that language, otherwise the app will crash
+    -->
     <plurals name="dict_item_count">
         <item quantity="zero">%,d n wawalen</item>
         <item quantity="one">%,d n wawal</item>
@@ -23,14 +26,13 @@
         <item quantity="many">%,d n wawalen</item>
         <item quantity="other">%,d n wawalen</item>
     </plurals>
-
     <string name="action_zoom_out">Senɣes</string>
     <string name="action_zoom_in">Semɣer</string>
     <string name="action_zoom_reset">Ales awennez n zoom</string>
-    <string name="action_select_style">Iɣunab</string>
+    <string name="action_select_style">Iɣunab...</string>
     <string name="select_style">Fren aɣanib</string>
     <string name="default_style_title">Amezwar</string>
-    <string name="subtitle_settings">Aɣewwaṛ</string>
+    <string name="subtitle_settings">Iɣewwaṛen</string>
     <string name="setting_remote_content_always">Yal tikelt</string>
     <string name="setting_remote_content_wifi">Ala s Wi-Fi</string>
     <string name="setting_remote_content_never">Wurǧin</string>
@@ -38,13 +40,13 @@
     <string name="setting_about">Ɣef  %1$s</string>
     <string name="setting_clear_cache">Sfeḍ tuffirt</string>
     <string name="setting_clear_cache_subtitle">Sfeḍ tuffirt s ugbur n tugniwin tizɣarayin</string>
-    <string name="confirm_clear_cached_content">Sfeḍ tuffirt?</string>
-    <string name="article_collection_nothing_found">Ula ayen yettwafen</string>
+    <string name="confirm_clear_cached_content">Sfeḍ agbur yellan deg tuffirt?</string>
+    <string name="article_collection_nothing_found">Ulac ayen yettwafen</string>
     <string name="article_collection_selected_not_available">Amagrad yettwafernen ulac-it</string>
     <string name="article_collection_nothing_to_lookup">Ulac i unadi</string>
     <string name="article_view_msg_not_found">Ulac ayen yettwafen</string>
     <string name="dictionaries_please_wait">Rǧu ma ulac aɣilif</string>
-    <string name="dictionaries_scanning_device">Andi deg imawalen iteddu…</string>
+    <string name="dictionaries_scanning_device">Andi ɣef imawalen iteddu...</string>
     <string name="dictionaries_confirm_forget">Ttu %1$s?</string>
     <string name="lookup_nothing_found">Ulac ayen yettwafen</string>
     <string name="main_empty_bookmarks">Ulac asɣal</string>
@@ -87,7 +89,16 @@
     <string name="setting_ui_theme">Agrudem n useqdac</string>
     <string name="setting_ui_theme_light">Aceɛlal</string>
     <string name="setting_ui_theme_dark">Ubrik</string>
-    <string name="action_load_remote_content">Asali n ugbur azɣaay iteddu</string>
+    <string name="action_load_remote_content">Asali n ugbur azɣaray iteddu</string>
     <string name="action_fullscreen">Agdil aččuran</string>
     <string name="setting_use_volume_for_nav">Seqded tiqeffalin n ubleɣ akken ad tinigeḍ</string>
+    <string name="application_license_url">https://gnu.org/licenses/gpl.html</string>
+    <string name="application_version">Lqem %1$s</string>
+    <string name="find_hint">Nadi deg usebter</string>
+    <string name="auto_style_title">Awurman</string>
+    <string name="find_next">Uḍfir</string>
+    <string name="find_previous">Uzwir</string>
+    <string name="setting_ui_theme_system">Akken yella unagraw</string>
+    <string name="application_license_name">Turagt tamatut tazayezt GNU lqem wis 3</string>
+    <string name="setting_auto_paste">Asenṭeḍ awurman seg tecfawit</string>
 </resources>
