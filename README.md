@@ -25,7 +25,9 @@
 Lookup queries are punctuation, diacritics and case
 insensitive.
 
-![](./images/lookup.png)
+<p align="left">
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/lookup.png" width=30%/>
+</p>
 
 
 ### Bookmarks and History
@@ -40,10 +42,6 @@ remove bookmark or history record, long tap a list item to enter
 selection mode, tap items to be removed, tap Trash Can icon and
 confirm. A bookmark can also be removed by tapping Bookmark icon
 when viewing article.
-
-![](images/bookmarks.png)
-![](images/history.png)
-
 
 ### Dictionary Management
 
@@ -64,8 +62,9 @@ history or when following links in other articles. Unwanted dictionaries
 can also be completely removed from the program (but dictionary files
 are not deleted).
 
-![](images/dictionaries.png)
-
+<p align="left">
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/dictionaries.png" width=30%/>
+</p>
 
 ### Article Appearance
 
@@ -73,19 +72,22 @@ Dictionaries may include alternate style sheets. User may
 also add custom style sheets via Settings tab. Dictionary built-in and
 user styles appear in the "Style..." menu in article view.
 
-![](images/article_appearance_default.png)
-![](images/article_menu.png)
-![](images/article_appearance_select_style.png)
-![](images/article_appearance_dark.png)
+
+<p align="left">
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/article_appearance_default.png" width=30%/>
+</p>
 
 ### Math
 
 Mathematical [formulas in Wikipedia](https://meta.wikimedia.org/wiki/Help:Displaying_a_formula) articles are rendered as text
 using [MathJax](http://www.mathjax.org/) - scalable, styleable, beautiful on any screen.
 
-![](images/article-integral.png)
-![](images/article-ru-ryad-taylora.png)
-![](images/article-ru-zam-predely.png)
+
+<p align="left">
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/article-integral.png" width=30%/>
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/article-ru-ryad-taylora.png" width=30%/>
+</p>
+
 
 ### Random Article
 Tapping application logo in main activity finds a random title
