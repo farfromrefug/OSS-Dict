@@ -16,6 +16,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -25,6 +26,8 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
+import com.google.android.material.appbar.AppBarLayout;
+import com.google.android.material.behavior.HideBottomViewOnScrollBehavior;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationBarView;
@@ -43,6 +46,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         ViewPager.OnPageChangeListener {
     private static final String TAG = MainActivity.class.getSimpleName();
     private AppSectionsPagerAdapter appSectionsPagerAdapter;
+    private AppBarLayout appBarLayout;
     private ViewPager viewPager;
     private BottomNavigationView bottomNavigationView;
     private FloatingActionButton fab;
@@ -62,6 +66,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         appSectionsPagerAdapter = new AppSectionsPagerAdapter(getSupportFragmentManager());
 
+        appBarLayout = findViewById(R.id.appBar);
         viewPager = findViewById(R.id.pager);
         viewPager.setOffscreenPageLimit(appSectionsPagerAdapter.getCount());
         viewPager.setAdapter(appSectionsPagerAdapter);
@@ -128,10 +133,12 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     @Override
     public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+//        appBarLayout.setExpanded(true, true);
     }
 
     @Override
     public void onPageSelected(int position) {
+//        ((HideBottomViewOnScrollBehavior)((CoordinatorLayout.LayoutParams)bottomNavigationView.getLayoutParams()).getBehavior()).slideUp(bottomNavigationView);
         if (oldPosition >= 0) {
             bottomNavigationView.getMenu().getItem(oldPosition).setChecked(false);
             Fragment frag = appSectionsPagerAdapter.getItem(oldPosition);
