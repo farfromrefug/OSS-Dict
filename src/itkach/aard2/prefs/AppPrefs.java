@@ -1,5 +1,7 @@
 package itkach.aard2.prefs;
 
+import android.content.SharedPreferences;
+
 import androidx.annotation.NonNull;
 
 import itkach.aard2.SlobHelper;
@@ -7,6 +9,7 @@ import itkach.aard2.utils.ThreadUtils;
 
 public class AppPrefs extends Prefs {
     private static final String PREF_UI_THEME = "UITheme";
+    public static final String PREF_DISABLE_HISTORY = "disable_history";
     private static final String PREF_QUERY = "query";
     private static final String PREF_RANDOM_FAV_LOOKUP = "onlyFavDictsForRandomLookup";
     private static final String PREF_USE_VOLUME_FOR_NAV = "useVolumeForNav";
@@ -17,7 +20,7 @@ public class AppPrefs extends Prefs {
     public static final String PREF_UI_THEME_DARK = "dark";
 
     private static AppPrefs instance;
-    private static AppPrefs getInstance() {
+    public static AppPrefs getInstance() {
         if (instance == null) {
             instance = new AppPrefs();
         }
@@ -32,6 +35,12 @@ public class AppPrefs extends Prefs {
     public static String getPreferredTheme() {
         return getInstance().prefs.getString(PREF_UI_THEME, PREF_UI_THEME_LIGHT);
     }
+
+
+    public static SharedPreferences getPreferences() {
+        return getInstance().prefs;
+    }
+
 
     public static void setPreferredTheme(@NonNull String preferredTheme) {
         getInstance().prefs.edit().putString(PREF_UI_THEME, preferredTheme).apply();
@@ -72,11 +81,11 @@ public class AppPrefs extends Prefs {
 
 
     public static boolean disableHistory() {
-        return getInstance().prefs.getBoolean("disable_history", false);
+        return getInstance().prefs.getBoolean(PREF_DISABLE_HISTORY, false);
     }
 
     public static void setDisableHistory(boolean disableHistory) {
-        getInstance().prefs.edit().putBoolean("disable_history", disableHistory).apply();
+        getInstance().prefs.edit().putBoolean(PREF_DISABLE_HISTORY, disableHistory).apply();
         ThreadUtils.postOnBackgroundThread(() -> SlobHelper.getInstance().history.clear());
     }
     public static boolean disableRandomLookup() {

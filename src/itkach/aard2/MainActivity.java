@@ -1,5 +1,6 @@
 package itkach.aard2;
 
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -24,6 +25,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.appbar.AppBarLayout;
@@ -32,6 +34,9 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationBarView;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
 
 import itkach.aard2.article.ArticleCollectionActivity;
@@ -43,7 +48,7 @@ import itkach.aard2.utils.ClipboardUtils;
 import itkach.aard2.utils.Utils;
 
 public class MainActivity extends AppCompatActivity implements NavigationBarView.OnItemSelectedListener,
-        ViewPager.OnPageChangeListener {
+        ViewPager.OnPageChangeListener, SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String TAG = MainActivity.class.getSimpleName();
     private AppSectionsPagerAdapter appSectionsPagerAdapter;
     private AppBarLayout appBarLayout;
@@ -63,8 +68,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         Utils.updateNightMode();
         setContentView(R.layout.activity_main);
         setSupportActionBar(findViewById(R.id.toolbar));
-
-        appSectionsPagerAdapter = new AppSectionsPagerAdapter(getSupportFragmentManager());
+        appSectionsPagerAdapter = new AppSectionsPagerAdapter(getSupportFragmentManager(), AppPrefs.disableHistory());
 
         appBarLayout = findViewById(R.id.appBar);
         viewPager = findViewById(R.id.pager);
@@ -74,6 +78,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         bottomNavigationView = findViewById(R.id.bottom_navigation);
         bottomNavigationView.setOnItemSelectedListener(this);
+        updateHistoryTabState();
 
         fab = findViewById(R.id.fab);
 
@@ -117,6 +122,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int itemId = item.getItemId();
+        int offset = appSectionsPagerAdapter.tabHistoryDisabled ? -1 : 0;
         if (itemId == R.id.action_lookup) {
             viewPager.setCurrentItem(0);
         } else if (itemId == R.id.action_bookmarks) {
@@ -124,9 +130,9 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         } else if (itemId == R.id.action_history) {
             viewPager.setCurrentItem(2);
         } else if (itemId == R.id.action_dictionaries) {
-            viewPager.setCurrentItem(3);
+            viewPager.setCurrentItem(3 + offset);
         } else if (itemId == R.id.action_settings) {
-            viewPager.setCurrentItem(4);
+            viewPager.setCurrentItem(4 + offset);
         } else return false;
         return true;
     }
@@ -135,13 +141,16 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
 //        appBarLayout.setExpanded(true, true);
     }
-
+    private String getFragmentTag(int fragmentPosition)
+    {
+        return "android:switcher:" + viewPager.getId() + ":" + fragmentPosition;
+    }
     @Override
     public void onPageSelected(int position) {
 //        ((HideBottomViewOnScrollBehavior)((CoordinatorLayout.LayoutParams)bottomNavigationView.getLayoutParams()).getBehavior()).slideUp(bottomNavigationView);
-        if (oldPosition >= 0) {
+        if (oldPosition >= 0 && oldPosition < appSectionsPagerAdapter.getCount()) {
             bottomNavigationView.getMenu().getItem(oldPosition).setChecked(false);
-            Fragment frag = appSectionsPagerAdapter.getItem(oldPosition);
+            Fragment frag = getSupportFragmentManager().findFragmentByTag(getFragmentTag(oldPosition));
             if (frag instanceof BlobDescriptorListFragment) {
                 ((BlobDescriptorListFragment) frag).finishActionMode();
             }
@@ -166,7 +175,14 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        AppPrefs.getPreferences().registerOnSharedPreferenceChangeListener(this);
+    }
+
+    @Override
     protected void onPause() {
+        AppPrefs.getPreferences().unregisterOnSharedPreferenceChangeListener(this);
         //Looks like shown soft input sometimes causes a system ui visibility
         //change event that breaks article activity launched from here out of full screen mode.
         //Hiding it appears to reduce that.
@@ -201,6 +217,38 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     public void hideFab() {
         fab.hide();
+    }
+
+    private void updateHistoryTabState() {
+        Boolean hidden = AppPrefs.disableHistory();
+//        if (hidden) {
+//            bottomNavigationView.getMenu().removeItem(0);
+//            bottomNavigationView.inflateMenu(R.menu.activity_main_navigation_actions_without_history);
+//        } else {
+//            bottomNavigationView.removeAllViews();
+//            bottomNavigationView.inflateMenu(R.menu.activity_main_navigation_actions);
+//
+//        }
+        int selectedId = bottomNavigationView.getSelectedItemId();
+        bottomNavigationView.getMenu().getItem(2).setVisible(!hidden);
+        appSectionsPagerAdapter.setTabHistoryDisabled(hidden);
+//        if (viewPager.getCurrentItem() >= 2) {
+            int currentItem = viewPager.getCurrentItem();
+
+                viewPager.setCurrentItem(currentItem);
+        bottomNavigationView.setSelectedItemId(selectedId);
+//            } else {
+//                viewPager.setCurrentItem(Math.min (currentItem + 1, appSectionsPagerAdapter.getCount() -1));
+//
+//            }
+//        }
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, @Nullable String key) {
+        if (Objects.equals(key, AppPrefs.PREF_DISABLE_HISTORY)) {
+            updateHistoryTabState();
+        }
     }
 
     public static final class BookmarksFragment extends BlobDescriptorListFragment {
@@ -290,38 +338,76 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     }
 
-    public static class AppSectionsPagerAdapter extends FragmentPagerAdapter {
-        private final Fragment[] fragments;
-        LookupFragment tabLookup;
-        BlobDescriptorListFragment tabBookmarks;
-        BlobDescriptorListFragment tabHistory;
-        DictionaryListFragment tabDictionaries;
-        SettingsFragment tabSettings;
 
-        public AppSectionsPagerAdapter(FragmentManager fm) {
+    public static class AppSectionsPagerAdapter extends FragmentPagerAdapter {
+        private ArrayList<Class> fragments;
+        Boolean tabHistoryDisabled = false;
+
+        public AppSectionsPagerAdapter(FragmentManager fm, Boolean tabHistoryDisabled) {
             super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
-            tabLookup = new LookupFragment();
-            tabBookmarks = new BookmarksFragment();
-            tabHistory = new HistoryFragment();
-            tabDictionaries = new DictionaryListFragment();
-            tabSettings = new SettingsFragment();
-            fragments = new Fragment[]{tabLookup, tabBookmarks, tabHistory, tabDictionaries, tabSettings};
+            this.tabHistoryDisabled = tabHistoryDisabled;
+            if (tabHistoryDisabled) {
+                fragments = new ArrayList<>(Arrays.asList(LookupFragment.class, BookmarksFragment.class, DictionaryListFragment.class, SettingsFragment.class));
+            } else {
+                fragments = new ArrayList<>(Arrays.asList(LookupFragment.class, BookmarksFragment.class, HistoryFragment.class, DictionaryListFragment.class, SettingsFragment.class));
+            }
+        }
+        public void setTabHistoryDisabled(Boolean hidden) {
+            if (tabHistoryDisabled != hidden) {
+                tabHistoryDisabled = hidden;
+                if (hidden) {
+                    fragments.remove(HistoryFragment.class);
+                } else {
+                    fragments.add(2, HistoryFragment.class);
+                }
+                notifyDataSetChanged();
+            }
+        }
+        @NonNull
+        @Override
+        public Object instantiateItem(@NonNull View container, int position) {
+            return super.instantiateItem(container, position);
         }
 
         @NonNull
         @Override
         public Fragment getItem(int i) {
-            return fragments[i];
+            try {
+                Fragment result = (Fragment) fragments.get(i).getConstructor().newInstance();
+                return result;
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return fragments.get(position).toString().hashCode();
         }
 
         @Override
         public int getCount() {
-            return fragments.length;
+            return fragments.size();
         }
 
         @Override
         public CharSequence getPageTitle(int position) {
             return "";
+        }
+
+        @Override
+        public int getItemPosition(Object object) {
+//            int index = -1;
+//            for (int i = 0; i < fragments.size(); i++) {
+//                if (fragments.get(i) == object.getClass()) {
+//                    index = i;
+//                    break;
+//                }
+//            }
+//            if (index == -1)
+                return POSITION_NONE;
+//            else
+//                return index;
         }
     }
 
