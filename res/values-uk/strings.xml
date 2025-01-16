@@ -31,7 +31,7 @@
     <string name="action_descending">За зменшенням</string>
     <string name="application_version">Версія %1$s</string>
     <string name="article_collection_selected_not_available">Вибрана стаття недоступна</string>
-    <string name="dictionaries_scanning_device">Йде пошук словників на пристрої...</string>
+    <string name="dictionaries_scanning_device">Пристрій для сканування словників…</string>
     <string name="msg_file_too_big">Файл занадто великий</string>
     <string name="msg_no_activity_to_get_content">Немає чим відкрити файл</string>
     <string name="select_style">Вибрати стиль</string>
@@ -91,4 +91,15 @@
     <string name="auto_style_title">Авто</string>
     <string name="application_license_url">https://gnu.org/licenses/gpl.html</string>
     <string name="application_license_name">GNU Загальна публічна ліцензія v3</string>
+    <string name="setting_ui_theme_auto">Авто</string>
+    <string name="action_yes">Так</string>
+    <string name="action_no">Ні</string>
+    <string name="setting_enable_force_dark_web_view">Увімкнути примусове затемнення у веб-перегляді в темному режимі</string>
+    <string name="setting_disable_javascript_title">Вимкнути JavaScript</string>
+    <string name="specified_number_of_items_selected">Вибрано %d</string>
+    <string name="action_open_random_article">Випадкова стаття</string>
+    <string name="setting_disable_history">Вимкнути історію</string>
+    <string name="setting_disable_random_lookup">Вимкнути випадковий пошук</string>
+    <string name="setting_remote_content_cache_first">Завантажуйте лише віддалений вміст, якщо він ще не кешований</string>
+    <string name="setting_disable_javascript_subtitle">Вимкнення JavaScript має небажані побічні ефекти, такі як застосування власних стилів і завантаження віддаленого вмісту.</string>
 </resources>
