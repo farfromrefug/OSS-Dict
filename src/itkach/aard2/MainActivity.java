@@ -164,8 +164,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                 mgr.hideSoftInputFromWindow(v.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
             }
         }
-
-        bottomNavigationView.getMenu().getItem(position).setChecked(true);
+        int offset = AppPrefs.disableHistory() && position>=2 ? 1 : 0;
+        bottomNavigationView.getMenu().getItem(position + offset).setChecked(true);
         oldPosition = position;
 
     }
