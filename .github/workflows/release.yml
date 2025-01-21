@@ -41,7 +41,7 @@ jobs:
       - name: Checkout slob
         run: |
           cd ..
-          git clone https://github.com/farfromrefug/slobj.git
+          git clone --depth 1 --branch v1.0.0 https://github.com/farfromrefug/slobj.git
       
       - uses: oleksiyrudenko/gha-git-credentials@v2-latest
         with:
