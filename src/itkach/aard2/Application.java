@@ -92,7 +92,9 @@ public class Application extends android.app.Application {
     public void lookupAsync(@NonNull String query) {
         if (currentLookupTask != null) {
             currentLookupTask.cancel(true);
-            notifyLookupCanceled(query);
+            ThreadUtils.postOnMainThread(() -> {
+                notifyLookupCanceled(query);
+            });
             currentLookupTask = null;
         }
         notifyLookupStarted(query);
