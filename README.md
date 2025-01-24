@@ -12,9 +12,17 @@
 </div>
 <hr>
 
-## Download
 
-   - [OSS-Dict](https://github.com/farfromrefug/OSS-Dict/releases)
+ ## Installation
+
+<div align="center">
+
+[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" height="80">](https://apt.izzysoft.de/packages/com.akylas.aard2)
+[<img src="badge_github.png" alt="Get it on GitHub" height="80">](https://github.com/farfromrefug/OSS-Dict/releases)
+</div>
+
+## Dictionaries
+
    - [Dictionaries](https://github.com/itkach/slob/wiki/Dictionaries)
 
 
