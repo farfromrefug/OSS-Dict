@@ -37,11 +37,6 @@ jobs:
           fetch-depth: 0
           filter: tree:0
           submodules: recursive
-
-      - name: Checkout slob
-        run: |
-          cd ..
-          git clone --depth 1 --branch v1.0.0 https://github.com/farfromrefug/slobj.git
       
       - uses: oleksiyrudenko/gha-git-credentials@v2-latest
         with:

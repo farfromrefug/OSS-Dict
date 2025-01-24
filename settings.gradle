@@ -6,4 +6,4 @@ pluginManagement {
     }
 }
 
-includeFlat 'slobj'
+include 'slobj'

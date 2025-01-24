@@ -1,0 +1,3 @@
+[submodule "slobj"]
+	path = slobj
+	url = https://github.com/farfromrefug/slobj.git
