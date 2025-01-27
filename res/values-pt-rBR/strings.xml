@@ -17,7 +17,6 @@
         <item quantity="one">%,d iten</item>
         <item quantity="other">%,d itens</item>
     </plurals>
-
     <string name="action_zoom_out">Reduzir</string>
     <string name="action_zoom_in">Ampliar</string>
     <string name="action_zoom_reset">Repor ampliação</string>
@@ -46,7 +45,6 @@
     <string name="main_empty_history">Sem histórico</string>
     <string name="main_empty_dictionaries">Sem dicionários</string>
     <string name="delete">Apagar</string>
-
     <plurals name="confirm_delete_bookmark_count">
         <item quantity="one">%,d marcador</item>
         <item quantity="other">%,d marcadores</item>
@@ -55,7 +53,6 @@
         <item quantity="one">%,d registo do histórico</item>
         <item quantity="other">%,d registos do histórico</item>
     </plurals>
-
     <string name="blob_descriptor_confirm_delete">Apagar %1$s?</string>
     <string name="msg_failed_to_read_file">Erro na leitura do arquivo</string>
     <string name="msg_file_too_big">Arquivo muito grande</string>
@@ -80,5 +77,4 @@
     <string name="auto_style_title">Automático</string>
     <string name="action_fullscreen">Tela inteira</string>
     <string name="setting_use_volume_for_nav">Usar botões de volume para navegação</string>
-
 </resources>
