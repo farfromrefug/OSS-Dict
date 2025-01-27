@@ -51,13 +51,14 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     final static int POS_REMOTE_CONTENT_CACHE = 3;
     final static int POS_FAV_RANDOM = 4;
     final static int POS_USE_VOLUME_FOR_NAV = 5;
-    final static int POS_AUTO_PASTE = 6;
-    final static int POS_DISABLE_RANDOM_LOOKUP = 7;
-    final static int POS_DISABLE_HISTORY = 8;
-    final static int POS_DISABLE_JS = 9;
-    final static int POS_USER_STYLES = 10;
-    final static int POS_CLEAR_CACHE = 11;
-    final static int POS_ABOUT = 12;
+    final static int POS_SHOW_KEYBOARD_LOOKUP = 6;
+    final static int POS_AUTO_PASTE = 7;
+    final static int POS_DISABLE_RANDOM_LOOKUP = 8;
+    final static int POS_DISABLE_HISTORY = 9;
+    final static int POS_DISABLE_JS = 10;
+    final static int POS_USER_STYLES = 11;
+    final static int POS_CLEAR_CACHE = 12;
+    final static int POS_ABOUT = 13;
 
     SettingsListAdapter(Fragment fragment) {
         this.fragment = fragment;
@@ -105,6 +106,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_DISABLE_RANDOM_LOOKUP:
             case POS_DISABLE_JS:
             case POS_REMOTE_CONTENT_CACHE:
+            case POS_SHOW_KEYBOARD_LOOKUP:
                 view = LayoutInflater.from(parent.getContext()).inflate(R.layout.settings_switch, parent, false);
                 break;
             case POS_USER_STYLES:
@@ -145,6 +147,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
                 break;
             case POS_AUTO_PASTE:
                 getAutoPasteView(holder);
+                break;
+            case POS_SHOW_KEYBOARD_LOOKUP:
+                getShowKeyboarOnLookupView(holder);
                 break;
             case POS_DISABLE_HISTORY:
                 getDisableHistoryView(holder);
@@ -254,6 +259,20 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         toggle.setChecked(AppPrefs.useVolumeKeysForNavigation());
     }
 
+    private void getShowKeyboarOnLookupView(@NonNull ViewHolder holder) {
+        View view = holder.itemView;
+        MaterialSwitch toggle;
+        toggle = view.findViewById(R.id.setting_switch);
+        toggle.setText(R.string.setting_show_keyboard_lookup);
+        toggle.setOnClickListener(v -> {
+            boolean currentValue = AppPrefs.showKeyboarOnLookup();
+            boolean newValue = !currentValue;
+            AppPrefs.setShowKeyboarOnLookup(newValue);
+            toggle.setChecked(newValue);
+        });
+        view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
+        toggle.setChecked(AppPrefs.showKeyboarOnLookup());
+    }
     private void getAutoPasteView(@NonNull ViewHolder holder) {
         View view = holder.itemView;
         MaterialSwitch toggle;

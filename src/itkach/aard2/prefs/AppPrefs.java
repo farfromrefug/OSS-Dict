@@ -14,6 +14,7 @@ public class AppPrefs extends Prefs {
     private static final String PREF_RANDOM_FAV_LOOKUP = "onlyFavDictsForRandomLookup";
     private static final String PREF_USE_VOLUME_FOR_NAV = "useVolumeForNav";
     private static final String PREF_AUTO_PASTE = "autoPaste";
+    private static final String PREF_SHOW_KEYBOARD_LOOKUP = "showKeyboardLookup";
 
     public static final String PREF_UI_THEME_AUTO = "auto";
     public static final String PREF_UI_THEME_LIGHT = "light";
@@ -69,6 +70,14 @@ public class AppPrefs extends Prefs {
 
     public static void setUseVolumeKeysForNavigation(boolean useVolumeKeysForNavigation) {
         getInstance().prefs.edit().putBoolean(PREF_USE_VOLUME_FOR_NAV, useVolumeKeysForNavigation).apply();
+    }
+
+    public static boolean showKeyboarOnLookup() {
+        return getInstance().prefs.getBoolean(PREF_SHOW_KEYBOARD_LOOKUP, false);
+    }
+
+    public static void setShowKeyboarOnLookup(boolean value) {
+        getInstance().prefs.edit().putBoolean(PREF_SHOW_KEYBOARD_LOOKUP, value).apply();
     }
 
     public static boolean autoPasteInLookup() {

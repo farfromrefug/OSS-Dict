@@ -109,6 +109,9 @@ public class LookupFragment extends BaseListFragment implements LookupListener, 
         searchView.setOnQueryTextListener(this);
         searchView.setOnCloseListener(() -> true);
         searchView.setSubmitButtonEnabled(false);
+        if (!AppPrefs.showKeyboarOnLookup()) {
+            searchView.clearFocus();
+        }
     }
 
     @Override
