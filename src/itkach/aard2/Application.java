@@ -115,21 +115,28 @@ public class Application extends android.app.Application {
     }
 
     private void notifyLookupStarted(String query) {
-        for (LookupListener l : lookupListeners) {
-            l.onLookupStarted(query);
-        }
+        ThreadUtils.postOnMainThread(() -> {
+            for (LookupListener l : lookupListeners) {
+                l.onLookupStarted(query);
+            }
+        });
+
     }
 
     private void notifyLookupFinished(String query) {
-        for (LookupListener l : lookupListeners) {
-            l.onLookupFinished(query);
-        }
+        ThreadUtils.postOnMainThread(() -> {
+            for (LookupListener l : lookupListeners) {
+                l.onLookupFinished(query);
+            }
+        });
     }
 
     private void notifyLookupCanceled(String query) {
-        for (LookupListener l : lookupListeners) {
-            l.onLookupCanceled(query);
-        }
+        ThreadUtils.postOnMainThread(() -> {
+            for (LookupListener l : lookupListeners) {
+                l.onLookupCanceled(query);
+            }
+        });
     }
 
     private final List<LookupListener> lookupListeners = new ArrayList<>();
