@@ -1,7 +1,6 @@
 package itkach.aard2;
 
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -25,16 +24,13 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.appbar.AppBarLayout;
-import com.google.android.material.behavior.HideBottomViewOnScrollBehavior;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationBarView;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
@@ -52,6 +48,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     private static final String TAG = MainActivity.class.getSimpleName();
     private AppSectionsPagerAdapter appSectionsPagerAdapter;
     private AppBarLayout appBarLayout;
+    private CoordinatorLayout layout;
     private ViewPager viewPager;
     private BottomNavigationView bottomNavigationView;
     private FloatingActionButton fab;
@@ -70,6 +67,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         setSupportActionBar(findViewById(R.id.toolbar));
         appSectionsPagerAdapter = new AppSectionsPagerAdapter(getSupportFragmentManager(), AppPrefs.disableHistory());
 
+        layout = findViewById(R.id.layout);
         appBarLayout = findViewById(R.id.appBar);
         viewPager = findViewById(R.id.pager);
         viewPager.setOffscreenPageLimit(appSectionsPagerAdapter.getCount());
@@ -91,6 +89,17 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 //            getWindow().setNavigationBarContrastEnforced(false);
 //        }
 
+//        ViewCompat.setWindowInsetsAnimationCallback(
+//                findViewById(R.id.layout),
+//                new ImeProgressWindowInsetAnimation(progress -> {
+//                    layout.setProgress(progress);
+//                    return null;
+//                }, (view, insets) ->
+//                {
+//                    spacesWindowInsetListener(insets);
+//                    return null;
+//                }));
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.layout), (v, insets) -> {
             Insets bars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars()
@@ -101,6 +110,18 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             mlp.topMargin = bars.top;
             mlp.rightMargin = bars.right;
             v.setLayoutParams(mlp);
+
+            Insets ime  = insets.getInsets(
+                    WindowInsetsCompat.Type.ime()
+            );
+            mlp = (CoordinatorLayout.LayoutParams) fab.getLayoutParams();
+            mlp.bottomMargin = ime.bottom - bars.bottom;
+            fab.setLayoutParams(mlp);
+
+            View recyclerView = findViewById(R.id.recycler_view);
+            if (recyclerView != null) {
+                recyclerView.setPadding(0,0,0,ime.bottom > 0 ? ime.bottom - bars.bottom - bottomNavigationView.getHeight() : 0);
+            }
             return WindowInsetsCompat.CONSUMED;
         });
 
