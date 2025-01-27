@@ -209,7 +209,6 @@ lane :get_changelog  do |params|
   logs = conventional_changelog(format: changelogFormat, title: "#{platform.capitalize} Beta", display_title:false, display_links:display_links, display_scopes:false, order:["feat", "fix", "refactor", "perf"], ignore_scopes: ignoredScopes, debug:false, commit_url:commit_url ) || ""
   if (!logs.empty?)
     logs = logs.split(/[\n]/).uniq
-    logs.push("Translated by @farfromrefug using Weblate (French)")
     translateLogs = logs.select {|v| v =~ /Translated .* using Weblate/ }
     contributors = Array.new
     logs = (logs - translateLogs).map {|l| 
