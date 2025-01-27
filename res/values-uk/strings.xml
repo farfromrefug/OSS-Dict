@@ -102,4 +102,5 @@
     <string name="setting_disable_random_lookup">Вимкнути випадковий пошук</string>
     <string name="setting_remote_content_cache_first">Завантажуйте лише віддалений вміст, якщо він ще не кешований</string>
     <string name="setting_disable_javascript_subtitle">Вимкнення JavaScript має небажані побічні ефекти, такі як застосування власних стилів і завантаження віддаленого вмісту.</string>
+    <string name="setting_show_keyboard_lookup">Автоматично показувати клавіатуру для пошуку</string>
 </resources>
