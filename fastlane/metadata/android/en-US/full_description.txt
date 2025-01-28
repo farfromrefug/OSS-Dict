@@ -1,15 +1,15 @@
-**OSS-Dict** is an offline dictionary reader. It is fork of Aard 2 with new Material design and updated features
-
-**Features**
-
-* Lookup queries are punctuation, diacritics and case
-insensitive.
-* Bookmarks and History
-* Dictionary Management
-* Article Appearance: add your custom style sheets
-* Math: Mathematical formuals are scalable, styleable, beautiful on any screen
-* Random Article
-* Volume Buttons Navigation
-* Fullscreen Mode
-* Clipboard Auto-Paste
-* External Link Sharing
+<p><strong>OSS-Dict</strong> is an offline dictionary reader. It is fork of Aard 2 with new Material design and updated features</p>
+<p><strong>Features</strong></p>
+<ul>
+<li>Lookup queries are punctuation, diacritics and case
+insensitive.</li>
+<li>Bookmarks and History</li>
+<li>Dictionary Management</li>
+<li>Article Appearance: add your custom style sheets</li>
+<li>Math: Mathematical formuals are scalable, styleable, beautiful on any screen</li>
+<li>Random Article</li>
+<li>Volume Buttons Navigation</li>
+<li>Fullscreen Mode</li>
+<li>Clipboard Auto-Paste</li>
+<li>External Link Sharing</li>
+</ul>
