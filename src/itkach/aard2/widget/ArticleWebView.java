@@ -291,7 +291,6 @@ public class ArticleWebView extends SearchableWebView {
 
     @JavascriptInterface
     public void onStyleSet(String title) {
-        Log.d(TAG, "Style set! " + title);
         applyStylePref.cancel();
     }
 
