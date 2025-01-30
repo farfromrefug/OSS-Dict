@@ -10,6 +10,7 @@ import itkach.aard2.utils.ThreadUtils;
 public class AppPrefs extends Prefs {
     private static final String PREF_UI_THEME = "UITheme";
     public static final String PREF_DISABLE_HISTORY = "disable_history";
+    public static final String PREF_DISABLE_BOOKMARKS = "disable_bookmarks";
     private static final String PREF_QUERY = "query";
     private static final String PREF_RANDOM_FAV_LOOKUP = "onlyFavDictsForRandomLookup";
     private static final String PREF_USE_VOLUME_FOR_NAV = "useVolumeForNav";
@@ -96,6 +97,14 @@ public class AppPrefs extends Prefs {
     public static void setDisableHistory(boolean disableHistory) {
         getInstance().prefs.edit().putBoolean(PREF_DISABLE_HISTORY, disableHistory).apply();
         ThreadUtils.postOnBackgroundThread(() -> SlobHelper.getInstance().history.clear());
+    }
+    public static boolean disableBookmarks() {
+        return getInstance().prefs.getBoolean(PREF_DISABLE_BOOKMARKS, false);
+    }
+
+    public static void setDisableBookmarks(boolean value) {
+        getInstance().prefs.edit().putBoolean(PREF_DISABLE_BOOKMARKS, value).apply();
+//        ThreadUtils.postOnBackgroundThread(() -> SlobHelper.getInstance().bookmarks.clear());
     }
     public static boolean disableRandomLookup() {
         return getInstance().prefs.getBoolean("disable_random_lookup", false);

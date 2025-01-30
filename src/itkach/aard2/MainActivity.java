@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         Utils.updateNightMode();
         setContentView(R.layout.activity_main);
         setSupportActionBar(findViewById(R.id.toolbar));
-        appSectionsPagerAdapter = new AppSectionsPagerAdapter(getSupportFragmentManager(), AppPrefs.disableHistory());
+        appSectionsPagerAdapter = new AppSectionsPagerAdapter(getSupportFragmentManager(), AppPrefs.disableBookmarks(), AppPrefs.disableHistory());
 
         layout = findViewById(R.id.layout);
         appBarLayout = findViewById(R.id.appBar);
@@ -76,6 +76,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         bottomNavigationView = findViewById(R.id.bottom_navigation);
         bottomNavigationView.setOnItemSelectedListener(this);
+        updateBookmarksTabState();
         updateHistoryTabState();
 
         fab = findViewById(R.id.fab);
@@ -143,17 +144,18 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int itemId = item.getItemId();
-        int offset = appSectionsPagerAdapter.tabHistoryDisabled ? -1 : 0;
+        int offset = appSectionsPagerAdapter.tabBookmarksDisabled ? -1 : 0;
+        int offset2 = appSectionsPagerAdapter.tabHistoryDisabled ? offset -1 : offset;
         if (itemId == R.id.action_lookup) {
             viewPager.setCurrentItem(0);
         } else if (itemId == R.id.action_bookmarks) {
             viewPager.setCurrentItem(1);
         } else if (itemId == R.id.action_history) {
-            viewPager.setCurrentItem(2);
+            viewPager.setCurrentItem(2 + offset);
         } else if (itemId == R.id.action_dictionaries) {
-            viewPager.setCurrentItem(3 + offset);
+            viewPager.setCurrentItem(3 + offset2);
         } else if (itemId == R.id.action_settings) {
-            viewPager.setCurrentItem(4 + offset);
+            viewPager.setCurrentItem(4 + offset2);
         } else return false;
         return true;
     }
@@ -185,7 +187,13 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                 mgr.hideSoftInputFromWindow(v.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
             }
         }
-        int offset = AppPrefs.disableHistory() && position>=2 ? 1 : 0;
+        int offset = 0;
+//        if (AppPrefs.disableBookmarks() && position >= 1) {
+//            offset += 1;
+//        }
+        if (AppPrefs.disableHistory() && position >= (2 - offset)) {
+            offset += 1;
+        }
         bottomNavigationView.getMenu().getItem(position + offset).setChecked(true);
         oldPosition = position;
 
@@ -242,33 +250,30 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     private void updateHistoryTabState() {
         Boolean hidden = AppPrefs.disableHistory();
-//        if (hidden) {
-//            bottomNavigationView.getMenu().removeItem(0);
-//            bottomNavigationView.inflateMenu(R.menu.activity_main_navigation_actions_without_history);
-//        } else {
-//            bottomNavigationView.removeAllViews();
-//            bottomNavigationView.inflateMenu(R.menu.activity_main_navigation_actions);
-//
-//        }
         int selectedId = bottomNavigationView.getSelectedItemId();
         bottomNavigationView.getMenu().getItem(2).setVisible(!hidden);
         appSectionsPagerAdapter.setTabHistoryDisabled(hidden);
-//        if (viewPager.getCurrentItem() >= 2) {
-            int currentItem = viewPager.getCurrentItem();
-
-                viewPager.setCurrentItem(currentItem);
+        int currentItem = viewPager.getCurrentItem();
+        viewPager.setCurrentItem(currentItem);
         bottomNavigationView.setSelectedItemId(selectedId);
-//            } else {
-//                viewPager.setCurrentItem(Math.min (currentItem + 1, appSectionsPagerAdapter.getCount() -1));
-//
-//            }
-//        }
+    }
+
+    private void updateBookmarksTabState() {
+        Boolean hidden = AppPrefs.disableBookmarks();
+        int selectedId = bottomNavigationView.getSelectedItemId();
+        bottomNavigationView.getMenu().getItem(1).setVisible(!hidden);
+        appSectionsPagerAdapter.setTabBookmarkDisabled(hidden);
+        int currentItem = viewPager.getCurrentItem();
+        viewPager.setCurrentItem(currentItem);
+        bottomNavigationView.setSelectedItemId(selectedId);
     }
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, @Nullable String key) {
         if (Objects.equals(key, AppPrefs.PREF_DISABLE_HISTORY)) {
             updateHistoryTabState();
+        } else if (Objects.equals(key, AppPrefs.PREF_DISABLE_BOOKMARKS)) {
+            updateBookmarksTabState();
         }
     }
 
@@ -363,14 +368,29 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     public static class AppSectionsPagerAdapter extends FragmentPagerAdapter {
         private ArrayList<Class> fragments;
         Boolean tabHistoryDisabled = false;
+        Boolean tabBookmarksDisabled = false;
 
-        public AppSectionsPagerAdapter(FragmentManager fm, Boolean tabHistoryDisabled) {
+        public AppSectionsPagerAdapter(FragmentManager fm, Boolean tabBookmarksDisabled, Boolean tabHistoryDisabled) {
             super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
             this.tabHistoryDisabled = tabHistoryDisabled;
+            this.tabBookmarksDisabled = tabBookmarksDisabled;
+            fragments = new ArrayList<>(Arrays.asList(LookupFragment.class, BookmarksFragment.class, HistoryFragment.class, DictionaryListFragment.class, SettingsFragment.class));
+            if (tabBookmarksDisabled) {
+                fragments.remove(BookmarksFragment.class);
+            }
             if (tabHistoryDisabled) {
-                fragments = new ArrayList<>(Arrays.asList(LookupFragment.class, BookmarksFragment.class, DictionaryListFragment.class, SettingsFragment.class));
-            } else {
-                fragments = new ArrayList<>(Arrays.asList(LookupFragment.class, BookmarksFragment.class, HistoryFragment.class, DictionaryListFragment.class, SettingsFragment.class));
+                fragments.remove(HistoryFragment.class);
+            }
+        }
+        public void setTabBookmarkDisabled(Boolean hidden) {
+            if (tabBookmarksDisabled != hidden) {
+                tabBookmarksDisabled = hidden;
+                if (hidden) {
+                    fragments.remove(BookmarksFragment.class);
+                } else {
+                    fragments.add(1, BookmarksFragment.class);
+                }
+                notifyDataSetChanged();
             }
         }
         public void setTabHistoryDisabled(Boolean hidden) {
@@ -379,7 +399,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                 if (hidden) {
                     fragments.remove(HistoryFragment.class);
                 } else {
-                    fragments.add(2, HistoryFragment.class);
+                    int index = fragments.indexOf(DictionaryListFragment.class);
+                    fragments.add(index, HistoryFragment.class);
                 }
                 notifyDataSetChanged();
             }

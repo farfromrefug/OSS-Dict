@@ -54,11 +54,12 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     final static int POS_SHOW_KEYBOARD_LOOKUP = 6;
     final static int POS_AUTO_PASTE = 7;
     final static int POS_DISABLE_RANDOM_LOOKUP = 8;
-    final static int POS_DISABLE_HISTORY = 9;
-    final static int POS_DISABLE_JS = 10;
-    final static int POS_USER_STYLES = 11;
-    final static int POS_CLEAR_CACHE = 12;
-    final static int POS_ABOUT = 13;
+    final static int POS_DISABLE_BOOKMARKS = 9;
+    final static int POS_DISABLE_HISTORY = 10;
+    final static int POS_DISABLE_JS = 11;
+    final static int POS_USER_STYLES = 12;
+    final static int POS_CLEAR_CACHE = 13;
+    final static int POS_ABOUT = 14;
 
     SettingsListAdapter(Fragment fragment) {
         this.fragment = fragment;
@@ -102,6 +103,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_FAV_RANDOM:
             case POS_USE_VOLUME_FOR_NAV:
             case POS_AUTO_PASTE:
+            case POS_DISABLE_BOOKMARKS:
             case POS_DISABLE_HISTORY:
             case POS_DISABLE_RANDOM_LOOKUP:
             case POS_DISABLE_JS:
@@ -150,6 +152,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
                 break;
             case POS_SHOW_KEYBOARD_LOOKUP:
                 getShowKeyboarOnLookupView(holder);
+                break;
+            case POS_DISABLE_BOOKMARKS:
+                getDisableBookmarksView(holder);
                 break;
             case POS_DISABLE_HISTORY:
                 getDisableHistoryView(holder);
@@ -301,6 +306,20 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         });
         view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
         toggle.setChecked(AppPrefs.disableHistory());
+    }
+    private void getDisableBookmarksView(@NonNull ViewHolder holder) {
+        View view = holder.itemView;
+        MaterialSwitch toggle;
+        toggle = view.findViewById(R.id.setting_switch);
+        toggle.setText(R.string.setting_disable_bookmarks);
+        toggle.setOnClickListener(v -> {
+            boolean currentValue = AppPrefs.disableBookmarks();
+            boolean newValue = !currentValue;
+            AppPrefs.setDisableBookmarks(newValue);
+            toggle.setChecked(newValue);
+        });
+        view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
+        toggle.setChecked(AppPrefs.disableBookmarks());
     }
     private void getDisableRandomLookupView(@NonNull ViewHolder holder) {
         View view = holder.itemView;
