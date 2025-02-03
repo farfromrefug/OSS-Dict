@@ -22,6 +22,7 @@ import androidx.annotation.Nullable;
 import androidx.webkit.WebResourceErrorCompat;
 import androidx.webkit.WebSettingsCompat;
 import androidx.webkit.WebViewClientCompat;
+import androidx.webkit.WebViewFeature;
 
 import com.google.android.material.color.MaterialColors;
 
@@ -116,11 +117,12 @@ public class ArticleWebView extends SearchableWebView {
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
 
+
         // always load from cache if possible to prevent remote access as much as possible
         if (ArticleViewPrefs.loadRemoteContentOnlyIfNotCached()) {
             settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         }
-        if (ArticleViewPrefs.enableForceDark()) {
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK) && ArticleViewPrefs.enableForceDark()) {
             WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true);
         }
 
@@ -417,20 +419,18 @@ public class ArticleWebView extends SearchableWebView {
                 times.put(url, tsList);
                 tsList.add(System.currentTimeMillis());
                 view.loadUrl("javascript:" + StyleJsUtils.getStyleSwitcherJs());
-                try {
-                    timer.schedule(applyStylePref, 0, 20);
-                } catch (IllegalStateException ex) {
-                    Log.w(TAG, "Failed to schedule applyStylePref in view " + view.getId(), ex);
-                }
+                applyStylePref();
+//                try {
+//                    timer.schedule(applyStylePref, 0, 20);
+//                } catch (IllegalStateException ex) {
+//                    Log.w(TAG, "Failed to schedule applyStylePref in view " + view.getId(), ex);
+//                }
             }
         }
 
         @Override
         public void onPageFinished(WebView view, String url) {
             Log.d(TAG, "onPageFinished: " + url);
-            if (!Utils.isNightMode(view.getContext())) {
-                view.setBackgroundColor(MaterialColors.getColor(view, com.google.android.material.R.attr.colorSurface));
-            }
             if (url.startsWith("about:")) {
                 return;
             }
