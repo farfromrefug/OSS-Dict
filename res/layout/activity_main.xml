@@ -46,6 +46,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="top"
         android:src="@drawable/ic_auto_awesome"
+        android:visibility="gone"
         android:contentDescription="@string/action_open_random_article"
         app:layout_behavior="itkach.aard2.utils.FABScrollBehavior"
         app:layout_anchor="@id/bottom_navigation"
