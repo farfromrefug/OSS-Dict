@@ -188,9 +188,9 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             }
         }
         int offset = 0;
-//        if (AppPrefs.disableBookmarks() && position >= 1) {
-//            offset += 1;
-//        }
+        if (AppPrefs.disableBookmarks() && position >= 1) {
+            offset += 1;
+        }
         if (AppPrefs.disableHistory() && position >= (2 - offset)) {
             offset += 1;
         }
