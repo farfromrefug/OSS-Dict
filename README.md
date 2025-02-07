@@ -19,6 +19,10 @@
 
 [<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" height="80">](https://apt.izzysoft.de/packages/com.akylas.aard2)
 [<img src="badge_github.png" alt="Get it on GitHub" height="80">](https://github.com/farfromrefug/OSS-Dict/releases)
+[<img src="https://f-droid.org/badge/get-it-on.png"
+    alt="Get it on F-Droid"
+    height="80">](https://f-droid.org/packages/com.akylas.aard2)
+
 </div>
 
 ## Dictionaries
