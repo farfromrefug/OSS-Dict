@@ -90,4 +90,5 @@
     <string name="main_empty_dictionaries">Sözlük yok</string>
     <string name="msg_failed_to_read_file">Dosya okunamadı</string>
     <string name="setting_enable_force_dark_web_view">WebView\'da karanlık kipi etkinleştirmeye zorlayın</string>
+    <string name="setting_about">Yaklaşık %1$s</string>
 </resources>
