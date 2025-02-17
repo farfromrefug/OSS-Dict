@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">OSSDict</string>
+    <string name="app_name" translatable="false">OSS Dict</string>
     <string name="subtitle_lookup">Lookup</string>
     <string name="subtitle_bookmark">Bookmarks</string>
     <string name="subtitle_history">History</string>

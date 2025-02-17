@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OSSDict</string>
+    <string name="app_name">OSS Dict</string>
     <string name="action_add_dictionaries">Додати</string>
     <string name="action_bookmark_article">Закладинки</string>
     <string name="action_filter">Фільтр</string>
