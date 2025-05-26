@@ -43,8 +43,8 @@
     <string name="confirm_clear_cached_content">Sfeḍ agbur yellan deg tuffirt?</string>
     <string name="article_collection_nothing_found">Ulac ayen yettwafen</string>
     <string name="article_collection_selected_not_available">Amagrad yettwafernen ulac-it</string>
-    <string name="article_collection_nothing_to_lookup">Ulac i unadi</string>
-    <string name="article_view_msg_not_found">Ulac ayen yettwafen</string>
+    <string name="article_collection_nothing_to_lookup">Ulac i yellan i unadi</string>
+    <string name="article_view_msg_not_found">Ulac i yettwafen</string>
     <string name="dictionaries_please_wait">Rǧu ma ulac aɣilif</string>
     <string name="dictionaries_scanning_device">Andi ɣef imawalen iteddu...</string>
     <string name="dictionaries_confirm_forget">Ttu %1$s?</string>
@@ -85,7 +85,7 @@
     <string name="msg_dictionary_already_open">Yeldi yakan</string>
     <string name="msg_dictionary_added">Amawal %1$s yettwarna</string>
     <string name="setting_fav_random_search">Seqdec kan imawalen yettwafernen i unadi agacuṛan</string>
-    <string name="article_collection_invalid_link">Aseɣwen yemmut</string>
+    <string name="article_collection_invalid_link">Aseɣwen arameɣtu</string>
     <string name="setting_ui_theme">Agrudem n useqdac</string>
     <string name="setting_ui_theme_light">Aceɛlal</string>
     <string name="setting_ui_theme_dark">Ubrik</string>
