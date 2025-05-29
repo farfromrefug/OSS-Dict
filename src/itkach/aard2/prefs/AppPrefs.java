@@ -35,7 +35,7 @@ public class AppPrefs extends Prefs {
 
     @NonNull
     public static String getPreferredTheme() {
-        return getInstance().prefs.getString(PREF_UI_THEME, PREF_UI_THEME_LIGHT);
+        return getInstance().prefs.getString(PREF_UI_THEME, PREF_UI_THEME_AUTO);
     }
 
 
