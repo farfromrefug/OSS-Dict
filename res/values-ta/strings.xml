@@ -14,8 +14,8 @@
     <string name="action_sort_by_time">நேரம் மூலம்</string>
     <string name="action_lookup">தேடல்</string>
     <plurals name="dict_item_count">
-        <item quantity="one">%, டி உருப்படி</item>
-        <item quantity="other">%, டி உருப்படிகள்</item>
+        <item quantity="one">%,d உருப்படி</item>
+        <item quantity="other">%,d உருப்படிகள்</item>
     </plurals>
     <string name="action_zoom_out">சிறிதாக்கு</string>
     <string name="action_zoom_in">பெரிதாக்கு</string>
@@ -46,12 +46,12 @@
     <string name="main_empty_dictionaries">அகராதிகள் இல்லை</string>
     <string name="delete">நீக்கு</string>
     <plurals name="confirm_delete_bookmark_count">
-        <item quantity="one">%, டி புக்மார்க்கு</item>
-        <item quantity="other">%, டி புக்மார்க்குகள்</item>
+        <item quantity="one">%,d புக்மார்க்கு</item>
+        <item quantity="other">%,d புக்மார்க்குகள்</item>
     </plurals>
     <plurals name="confirm_delete_history_count">
-        <item quantity="one">%, டி வரலாற்று பதிவு</item>
-        <item quantity="other">%, டி வரலாறு பதிவுகள்</item>
+        <item quantity="one">%,d வரலாற்று பதிவு</item>
+        <item quantity="other">%,d வரலாறு பதிவுகள்</item>
     </plurals>
     <string name="blob_descriptor_confirm_delete">%1$s ஐ நீக்கவா?</string>
     <string name="msg_failed_to_read_file">கோப்பைப் படிக்கத் தவறிவிட்டது</string>
@@ -93,4 +93,6 @@
     <string name="setting_disable_random_lookup">சீரற்ற தேடலை முடக்கு</string>
     <string name="action_load_remote_content">தொலை உள்ளடக்கத்தை ஏற்றவும்</string>
     <string name="action_yes">ஆம்</string>
+    <string name="setting_show_keyboard_lookup">தேடலுக்கான விசைப்பலகை தானாகவே காண்பி</string>
+    <string name="setting_disable_bookmarks">புக்மார்க்குகளை முடக்கு</string>
 </resources>
