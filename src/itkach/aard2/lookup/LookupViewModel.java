@@ -15,12 +15,12 @@ public class LookupViewModel extends AndroidViewModel {
         this.application = (itkach.aard2.Application) application;
     }
 
-    public void lookupLastQuery() {
-        String query = AppPrefs.getLastQuery();
-        if (!query.isEmpty()) {
-            application.lookupAsync(AppPrefs.getLastQuery());
-        }
-    }
+    //public void lookupLastQuery() {
+    //    String query = AppPrefs.getLastQuery();
+    //    if (!query.isEmpty()) {
+    //        application.lookupAsync(AppPrefs.getLastQuery());
+    //    }
+   // }
 
     public void lookup(@NonNull String query) {
         if (!AppPrefs.getLastQuery().equals(query)) {
