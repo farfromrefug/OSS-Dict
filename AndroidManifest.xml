@@ -34,6 +34,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
             </intent-filter>
+                        <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="en.m.wikipedia.org" />
+                <data android:host="en.wikipedia.org" />
+                
+            </intent-filter>
         </activity>
 
         <activity
@@ -154,7 +166,7 @@
         </activity-alias>
 
         <activity-alias
-            android:enabled="true"
+            android:enabled="false"
             android:name="en.wikipedia.org"
             android:targetActivity=".article.ArticleCollectionActivity"
             android:exported="true">
