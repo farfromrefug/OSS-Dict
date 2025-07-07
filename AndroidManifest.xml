@@ -87,13 +87,6 @@
                 <data android:mimeType="text/plain" />
                 <data android:scheme="https" />
             </intent-filter>
-        </activity>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="ar.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -106,13 +99,7 @@
                 <data android:host="ar.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
 
-        <activity-alias
-            android:enabled="false"
-            android:name="ar.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -125,13 +112,6 @@
                 <data android:host="ar.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="de.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -144,13 +124,7 @@
                 <data android:host="de.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="de.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
+        
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -163,14 +137,7 @@
                 <data android:host="de.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="en.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
-            <intent-filter>
+        <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
@@ -182,14 +149,7 @@
                 <data android:host="en.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="en.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
-            <intent-filter>
+        <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
@@ -201,13 +161,6 @@
                 <data android:host="en.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="es.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -220,13 +173,6 @@
                 <data android:host="es.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="es.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -239,13 +185,6 @@
                 <data android:host="es.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="fa.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -258,13 +197,6 @@
                 <data android:host="fa.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="fa.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -277,13 +209,6 @@
                 <data android:host="fa.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="fr.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -296,13 +221,6 @@
                 <data android:host="fr.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="fr.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -315,13 +233,6 @@
                 <data android:host="fr.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="it.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -334,13 +245,6 @@
                 <data android:host="it.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="it.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -353,13 +257,6 @@
                 <data android:host="it.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="ja.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -372,13 +269,6 @@
                 <data android:host="ja.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="ja.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -391,13 +281,6 @@
                 <data android:host="ja.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="nl.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -410,13 +293,6 @@
                 <data android:host="nl.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="nl.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -429,13 +305,6 @@
                 <data android:host="nl.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="pl.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -448,13 +317,6 @@
                 <data android:host="pl.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="pl.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -467,13 +329,6 @@
                 <data android:host="pl.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="pt.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -486,13 +341,6 @@
                 <data android:host="pt.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="pt.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -505,13 +353,6 @@
                 <data android:host="pt.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="ru.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -524,13 +365,6 @@
                 <data android:host="ru.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="ru.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -543,13 +377,6 @@
                 <data android:host="ru.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="uk.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -562,13 +389,6 @@
                 <data android:host="uk.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="uk.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -581,13 +401,6 @@
                 <data android:host="uk.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="zh.wikipedia.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -600,13 +413,6 @@
                 <data android:host="zh.wikipedia.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="zh.wiktionary.org"
-            android:targetActivity=".article.ArticleCollectionActivity"
-            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -619,9 +425,7 @@
                 <data android:host="zh.wiktionary.org" />
                 <data android:pathPrefix="/wiki" />
             </intent-filter>
-        </activity-alias>
-
-
+        </activity>
         <uses-library
             android:required="false"
             android:name="com.sec.android.app.multiwindow" />
