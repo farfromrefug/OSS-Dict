@@ -154,7 +154,7 @@
         </activity-alias>
 
         <activity-alias
-            android:enabled="false"
+            android:enabled="true"
             android:name="en.wikipedia.org"
             android:targetActivity=".article.ArticleCollectionActivity"
             android:exported="true">
