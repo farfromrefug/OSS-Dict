@@ -137,7 +137,7 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
                 List<String> segments = uri.getPathSegments();
                 int length = segments.size();
                 if (length > 0) {
-                    lookupKey = segments.get(length - 1).replace('Special:Search?search=', '');
+                    lookupKey = segments.get(length - 1).replace("Special:Search?search=", "");
                 }
                 String slobUri = Utils.wikipediaToSlobUri(uri);
                 Log.d(TAG, String.format("Converted URI %s to slob URI %s", uri, slobUri));
