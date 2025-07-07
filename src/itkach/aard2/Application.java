@@ -71,7 +71,7 @@ public class Application extends android.app.Application {
                 slobHelper.lastLookupResult.setResult(Collections.emptyIterator());
                 slobHelper.updateSlobs();
                 ThreadUtils.postOnMainThread(() -> {
-                    enableLinkHandling(slobHelper.getActiveSlobs());
+                   // enableLinkHandling(slobHelper.getActiveSlobs());
                     slobHelper.bookmarks.notifyDataSetChanged();
                     slobHelper.history.notifyDataSetChanged();
                     lookupAsync(AppPrefs.getLastQuery());
