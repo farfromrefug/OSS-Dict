@@ -139,6 +139,9 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
                 if (length > 0) {
                     lookupKey = segments.get(length - 1);
                 }
+                if (lookupKey.equals("Special:Search")){
+                    lookupKey = uri.getQueryParameter("search");
+                }
                 String slobUri = Utils.wikipediaToSlobUri(uri);
                 Log.d(TAG, String.format("Converted URI %s to slob URI %s", uri, slobUri));
                 if (slobUri != null) {
@@ -154,7 +157,6 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
             String msg = application.getString(R.string.article_collection_nothing_to_lookup);
             throw new RuntimeException(msg);
         }
-        lookupKey = lookupKey.replace("Special:Search?search=", "");
         LookupResult lookupResult = new LookupResult(20, 1);
         Iterator<Slob.Blob> result = stemLookup(lookupKey, preferredSlobId);
         lookupResult.setResult(result);
