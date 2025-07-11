@@ -53,7 +53,7 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
         return failureMessageLiveData;
     }
     
-    public openUrlInBrowser(@NonNull Uri url) {
+    public void openUrlInBrowser(@NonNull Uri url) {
         Context context = getApplication().getApplicationContext();
         Intent intent = new Intent(Intent.ACTION_VIEW, url);
         intent.addCategory(Intent.CATEGORY_BROWSABLE);
