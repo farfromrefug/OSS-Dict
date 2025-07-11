@@ -20,7 +20,7 @@ public class AppPrefs extends Prefs {
     public static final String PREF_UI_THEME_AUTO = "auto";
     public static final String PREF_UI_THEME_LIGHT = "light";
     public static final String PREF_UI_THEME_DARK = "dark";
-
+    private static final String PREF_OPEN_MISSING_IN_BROWSER = "openMissingInBrowser";
     private static AppPrefs instance;
     public static AppPrefs getInstance() {
         if (instance == null) {
@@ -80,6 +80,15 @@ public class AppPrefs extends Prefs {
     public static void setShowKeyboarOnLookup(boolean value) {
         getInstance().prefs.edit().putBoolean(PREF_SHOW_KEYBOARD_LOOKUP, value).apply();
     }
+    
+    public static boolean openMissingInBrowser() {
+        return getInstance().prefs.getBoolean(PREF_OPEN_MISSING_IN_BROWSER, false);
+    }
+
+    public static void setOpenMissingInBrowser(boolean value) {
+        getInstance().prefs.edit().putBoolean(PREF_OPEN_MISSING_IN_BROWSER, value).apply();
+    }
+
 
     public static boolean autoPasteInLookup() {
         return getInstance().prefs.getBoolean(PREF_AUTO_PASTE, false);

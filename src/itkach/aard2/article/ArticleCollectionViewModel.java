@@ -8,6 +8,13 @@ import android.os.Build;
 import android.text.TextUtils;
 import android.util.Log;
 
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+
+import java.util.List;
+
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.AndroidViewModel;
@@ -22,6 +29,7 @@ import itkach.aard2.descriptor.BlobDescriptor;
 import itkach.aard2.R;
 import itkach.aard2.SlobHelper;
 import itkach.aard2.lookup.LookupResult;
+import itkach.aard2.prefs.AppPrefs;
 import itkach.aard2.utils.ThreadUtils;
 import itkach.aard2.utils.Utils;
 import itkach.slob.Slob;
@@ -43,6 +51,29 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
 
     public LiveData<CharSequence> getFailureMessageLiveData() {
         return failureMessageLiveData;
+    }
+    
+    public openUrlInBrowser(@NonNull Uri url) {
+        Context context = getApplication().getApplicationContext();
+        Intent intent = new Intent(Intent.ACTION_VIEW, url));
+        intent.addCategory(Intent.CATEGORY_BROWSABLE);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        
+        // Get all apps that can handle this intent
+        PackageManager pm = context.getPackageManager();
+        List<ResolveInfo> resolveInfos = pm.queryIntentActivities(intent, 0);
+        
+        for (ResolveInfo resolveInfo : resolveInfos) {
+            String packageName = resolveInfo.activityInfo.packageName;
+
+            // Skip your own app's package
+            if (!packageName.equals(context.getPackageName())) {
+                intent.setPackage(packageName);
+                context.startActivity(intent);
+                break;
+            }
+        }
+
     }
 
     public void loadBlobList(@NonNull Intent intent) {
@@ -72,8 +103,14 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
                         blobListLiveData.postValue(result);
                     } else if (currentPosition >= resultCount) {
                         failureMessageLiveData.postValue(application.getString(R.string.article_collection_selected_not_available));
+                        if (AppPrefs.openMissingInBrowser()) {
+                            openUrlInBrowser(articleUri);
+                        }
                     } else {
                         failureMessageLiveData.postValue(application.getString(R.string.article_collection_nothing_found));
+                        if (AppPrefs.openMissingInBrowser()) {
+                            openUrlInBrowser(articleUri);
+                        }
                     }
                 } else {
                     failureMessageLiveData.postValue(application.getString(R.string.article_collection_invalid_link));

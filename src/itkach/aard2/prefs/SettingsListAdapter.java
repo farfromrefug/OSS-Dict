@@ -60,6 +60,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     final static int POS_USER_STYLES = 12;
     final static int POS_CLEAR_CACHE = 13;
     final static int POS_ABOUT = 14;
+    final static int POS_OPEN_MISSING_BROWSER = 15;
 
     SettingsListAdapter(Fragment fragment) {
         this.fragment = fragment;
@@ -109,6 +110,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_DISABLE_JS:
             case POS_REMOTE_CONTENT_CACHE:
             case POS_SHOW_KEYBOARD_LOOKUP:
+            case POS_OPEN_MISSING_BROWSER:
                 view = LayoutInflater.from(parent.getContext()).inflate(R.layout.settings_switch, parent, false);
                 break;
             case POS_USER_STYLES:
@@ -152,6 +154,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
                 break;
             case POS_SHOW_KEYBOARD_LOOKUP:
                 getShowKeyboarOnLookupView(holder);
+                break;
+            case POS_OPEN_MISSING_BROWSER:
+                getOpenMissingInBrowserView(holder);
                 break;
             case POS_DISABLE_BOOKMARKS:
                 getDisableBookmarksView(holder);
@@ -277,6 +282,20 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         });
         view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
         toggle.setChecked(AppPrefs.showKeyboarOnLookup());
+    }
+    private void getOpenMissingInBrowserView(@NonNull ViewHolder holder) {
+        View view = holder.itemView;
+        MaterialSwitch toggle;
+        toggle = view.findViewById(R.id.setting_switch);
+        toggle.setText(R.string.setting_open_missing_browser);
+        toggle.setOnClickListener(v -> {
+            boolean currentValue = AppPrefs.openMissingInBrowser();
+            boolean newValue = !currentValue;
+            AppPrefs.setOpenMissingInBrowser(newValue);
+            toggle.setChecked(newValue);
+        });
+        view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
+        toggle.setChecked(AppPrefs.openMissingInBrowser());
     }
     private void getAutoPasteView(@NonNull ViewHolder holder) {
         View view = holder.itemView;
