@@ -76,7 +76,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
 
     @Override
     public int getItemCount() {
-        return 11;
+        return 16;
     }
 
     @Override
