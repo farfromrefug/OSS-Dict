@@ -55,7 +55,7 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
     
     public openUrlInBrowser(@NonNull Uri url) {
         Context context = getApplication().getApplicationContext();
-        Intent intent = new Intent(Intent.ACTION_VIEW, url));
+        Intent intent = new Intent(Intent.ACTION_VIEW, url);
         intent.addCategory(Intent.CATEGORY_BROWSABLE);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         
@@ -102,14 +102,16 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
                     if (resultCount != 0) {
                         blobListLiveData.postValue(result);
                     } else if (currentPosition >= resultCount) {
-                        failureMessageLiveData.postValue(application.getString(R.string.article_collection_selected_not_available));
                         if (AppPrefs.openMissingInBrowser()) {
                             openUrlInBrowser(articleUri);
+                        } else {
+                            failureMessageLiveData.postValue(application.getString(R.string.article_collection_selected_not_available));
                         }
                     } else {
-                        failureMessageLiveData.postValue(application.getString(R.string.article_collection_nothing_found));
                         if (AppPrefs.openMissingInBrowser()) {
                             openUrlInBrowser(articleUri);
+                        } else {
+                            failureMessageLiveData.postValue(application.getString(R.string.article_collection_nothing_found));
                         }
                     }
                 } else {
