@@ -17,6 +17,10 @@ import android.view.MenuItem;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -42,7 +46,7 @@ import com.google.android.material.color.MaterialColors;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
-
+import java.util.List;
 import java.util.Objects;
 
 import itkach.aard2.BuildConfig;
@@ -159,7 +163,11 @@ public class ArticleCollectionActivity extends AppCompatActivity
         viewModel.getFailureMessageLiveData().observe(this, message -> {
             if (message != null) {
                 new Handler(Looper.getMainLooper()).post(() -> {
-                    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                    if (AppPrefs.openMissingInBrowser()) {
+                        openUrlInBrowser(articleUri);
+                    } else {
+                        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                    }
                     finish();
                 });
             }
@@ -444,6 +452,28 @@ public class ArticleCollectionActivity extends AppCompatActivity
         public CharSequence getPageTitle(int position) {
             CharSequence label = blobListWrapper.getLabel(position);
             return label != null ? label : "???";
+        }
+
+    }
+    
+    public void openUrlInBrowser(@NonNull Uri url) {
+        Intent intent = new Intent(Intent.ACTION_VIEW, url);
+        intent.addCategory(Intent.CATEGORY_BROWSABLE);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        
+        // Get all apps that can handle this intent
+        PackageManager pm = getPackageManager();
+        List<ResolveInfo> resolveInfos = pm.queryIntentActivities(intent, 0);
+        
+        for (ResolveInfo resolveInfo : resolveInfos) {
+            String packageName = resolveInfo.activityInfo.packageName;
+
+            // Skip your own app's package
+            if (!packageName.equals(getPackageName())) {
+                intent.setPackage(packageName);
+                startActivity(intent);
+                break;
+            }
         }
 
     }

@@ -102,17 +102,11 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
                     if (resultCount != 0) {
                         blobListLiveData.postValue(result);
                     } else if (currentPosition >= resultCount) {
-                        if (AppPrefs.openMissingInBrowser()) {
-                            openUrlInBrowser(articleUri);
-                        } else {
-                            failureMessageLiveData.postValue(application.getString(R.string.article_collection_selected_not_available));
-                        }
+
+
+                        failureMessageLiveData.postValue(application.getString(R.string.article_collection_selected_not_available));
                     } else {
-                        if (AppPrefs.openMissingInBrowser()) {
-                            openUrlInBrowser(articleUri);
-                        } else {
-                            failureMessageLiveData.postValue(application.getString(R.string.article_collection_nothing_found));
-                        }
+                        failureMessageLiveData.postValue(application.getString(R.string.article_collection_nothing_found));
                     }
                 } else {
                     failureMessageLiveData.postValue(application.getString(R.string.article_collection_invalid_link));
