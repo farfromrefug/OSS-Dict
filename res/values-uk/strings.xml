@@ -104,4 +104,5 @@
     <string name="setting_disable_javascript_subtitle">Вимкнення JavaScript має небажані побічні ефекти, такі як застосування власних стилів і завантаження віддаленого вмісту.</string>
     <string name="setting_show_keyboard_lookup">Автоматично показувати клавіатуру для пошуку</string>
     <string name="setting_disable_bookmarks">Вимкнути закладки</string>
+    <string name="setting_open_missing_browser">Відкрити відсутні статті у браузері</string>
 </resources>

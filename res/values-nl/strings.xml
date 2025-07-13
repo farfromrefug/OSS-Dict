@@ -95,4 +95,5 @@
     <string name="find_hint">Zoeken op pagina</string>
     <string name="find_next">Volgende</string>
     <string name="find_previous">Vorige</string>
+    <string name="setting_open_missing_browser">Ontbrekende artikels in browser openen</string>
 </resources>
