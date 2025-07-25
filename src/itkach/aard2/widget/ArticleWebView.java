@@ -448,6 +448,7 @@ public class ArticleWebView extends SearchableWebView {
             }
             view.loadUrl("javascript:" + StyleJsUtils.getStyleSwitcherJs() + ";$SLOB.setStyleTitles($styleSwitcher.getTitles())");
             applyStylePref();
+            view.setVisibility(WebView.VISIBLE);
         }
 
         @Nullable
