@@ -95,4 +95,11 @@
     <string name="action_yes">Ja</string>
     <string name="specified_number_of_items_selected">%d ausgewählt</string>
     <string name="action_open_random_article">Zufälliger Artikel</string>
+    <string name="setting_show_keyboard_lookup">Tastatur für Suche automatisch einblenden</string>
+    <string name="setting_open_missing_browser">Fehlende Artikel im Browser öffnen</string>
+    <string name="setting_enable_force_dark_web_view">Dunklen Modus in Webansicht im Dark Mode erzwingen</string>
+    <string name="setting_disable_bookmarks">Lesezeichen deaktivieren</string>
+    <string name="setting_disable_random_lookup">Zufällige Suche deaktivieren</string>
+    <string name="setting_remote_content_cache_first">Remote Content nur laden wenn er nicht bereits gecached ist</string>
+    <string name="setting_disable_javascript_subtitle">Das Deaktivieren von JavaScript hat ungewollte Nebenwirkungen wie das Anwenden von benutzerdefinierten Styles und dem Laden von fremden Inhalten.</string>
 </resources>
