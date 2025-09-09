@@ -35,14 +35,14 @@
     <string name="setting_clear_cache">Supprimer cache</string>
     <string name="setting_clear_cache_subtitle">Supprimer cache, ainsi que les images extérieures</string>
     <string name="confirm_clear_cached_content">Supprimer cache ?</string>
-    <string name="article_collection_nothing_found">Rien trouvé</string>
+    <string name="article_collection_nothing_found">Aucun résultat trouvé</string>
     <string name="article_collection_selected_not_available">L\'article sélectionné est indisponible</string>
     <string name="article_collection_nothing_to_lookup">Rien à rechercher</string>
     <string name="article_view_msg_not_found">Rien trouvé</string>
     <string name="dictionaries_please_wait">Attendre svp</string>
     <string name="dictionaries_scanning_device">Recherche en cours de dictionnaires…</string>
     <string name="dictionaries_confirm_forget">Oublier "%1$s" ?</string>
-    <string name="lookup_nothing_found">Rien trouvé</string>
+    <string name="lookup_nothing_found">Aucun résultat trouvé</string>
     <string name="main_empty_bookmarks">Pas de signets</string>
     <string name="main_empty_history">Historique vide</string>
     <string name="main_empty_dictionaries">Aucun dictionnaire</string>
@@ -85,4 +85,19 @@
     <string name="find_next">Suivant</string>
     <string name="find_previous">Précédent</string>
     <string name="setting_ui_theme_system">Système de suivi</string>
+    <string name="setting_show_keyboard_lookup">Afficher automatiquement le clavier pour la recherche</string>
+    <string name="setting_open_missing_browser">Ouvrir les articles manquants dans le navigateur</string>
+    <string name="setting_auto_paste">Collage automatique depuis le presse-papiers</string>
+    <string name="setting_ui_theme_auto">Automatique</string>
+    <string name="action_yes">Oui</string>
+    <string name="action_no">Non</string>
+    <string name="setting_enable_force_dark_web_view">Forcer le mode sombre dans la vue Web en mode sombre</string>
+    <string name="setting_disable_javascript_title">Désactiver JavaScript</string>
+    <string name="setting_disable_javascript_subtitle">La désactivation de JavaScript peut avoir des effets secondaires indésirables, tels que l\'application de styles personnalisés et le chargement de contenus distants.</string>
+    <string name="specified_number_of_items_selected">%d sélectionné(s)</string>
+    <string name="action_open_random_article">Article au hasard</string>
+    <string name="setting_disable_history">Désactiver l\'historique</string>
+    <string name="setting_disable_bookmarks">Désactiver les signets</string>
+    <string name="setting_disable_random_lookup">Désactiver la recherche aléatoire</string>
+    <string name="setting_remote_content_cache_first">Ne charger le contenu distant que s\'il n\'est pas déjà mis en cache</string>
 </resources>
