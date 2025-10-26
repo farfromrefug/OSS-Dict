@@ -91,4 +91,9 @@
     <string name="msg_failed_to_read_file">Dosya okunamadı</string>
     <string name="setting_enable_force_dark_web_view">WebView\'da karanlık kipi etkinleştirmeye zorlayın</string>
     <string name="setting_about">Yaklaşık %1$s</string>
+    <string name="article_collection_nothing_to_lookup">Bakılacak bir şey yok</string>
+    <string name="msg_failed_to_store_user_style">Kullanıcı stili kaydedilemedi</string>
+    <string name="msg_no_activity_to_get_content">Dosyayı açmak için kullanılabilir etkinlik yok</string>
+    <string name="action_goto_parent_dir">Yukarı</string>
+    <string name="setting_open_missing_browser">Eksik maddeleri tarayıcıda aç</string>
 </resources>
