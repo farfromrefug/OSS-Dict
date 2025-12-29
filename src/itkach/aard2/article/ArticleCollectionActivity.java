@@ -163,8 +163,8 @@ public class ArticleCollectionActivity extends AppCompatActivity
         viewModel.getFailureMessageLiveData().observe(this, message -> {
             if (message != null) {
                 new Handler(Looper.getMainLooper()).post(() -> {
-                    if (AppPrefs.openMissingInBrowser()) {
-                        openUrlInBrowser(articleUri);
+                    if (AppPrefs.openMissingInBrowser() && viewModel.articleUri != null) {
+                        openUrlInBrowser(viewModel.articleUri);
                     } else {
                         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
                     }
