@@ -3,6 +3,8 @@ package itkach.aard2;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -80,9 +82,9 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         // This detects when "allow network access" is disabled in app settings
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
-                android.net.Network activeNetwork = cm.getActiveNetwork();
+                Network activeNetwork = cm.getActiveNetwork();
                 if (activeNetwork != null) {
-                    android.net.NetworkCapabilities capabilities = cm.getNetworkCapabilities(activeNetwork);
+                    NetworkCapabilities capabilities = cm.getNetworkCapabilities(activeNetwork);
                     // Check if app has permission to use this network
                     // If capabilities is null, it means the app cannot access the network
                     if (capabilities == null) {
@@ -90,6 +92,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                         Log.w(TAG, "Network access is disabled for this app in settings");
                     }
                 }
+                // Note: If activeNetwork is null, it could mean no network is available (device offline)
+                // or network access is blocked. We don't show alert for general offline state.
             } catch (SecurityException e) {
                 // This can happen if network access is completely blocked
                 networkRestricted = true;
