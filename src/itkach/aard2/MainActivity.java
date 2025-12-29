@@ -77,17 +77,12 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         // Check if background data is restricted (API 24+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             int restrictBackgroundStatus = cm.getRestrictBackgroundStatus();
+            // Only show warning if app is restricted and not whitelisted
             if (restrictBackgroundStatus == ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED) {
                 networkRestricted = true;
                 Log.w(TAG, "Network access is restricted for this app");
             }
-        }
-
-        // Also check if there's any active network available
-        if (!networkRestricted && cm.getActiveNetworkInfo() == null) {
-            // No active network, but this might just be airplane mode or no connectivity
-            // Don't show the warning in this case as it's not app-specific
-            return;
+            // If status is WHITELISTED, the app has network access despite system restrictions
         }
 
         if (networkRestricted) {
