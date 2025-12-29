@@ -1,6 +1,7 @@
 package itkach.aard2.slob;
 
 import android.net.Uri;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -11,9 +12,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.channels.Channels;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
@@ -399,6 +402,7 @@ public class SlobServer extends Thread {
      * @return true if ServerSocket can be created, false if network access is blocked
      */
     public static boolean canUseServerSocket(@NonNull String ip, int port) {
+        Log.d("SlobServer", "canUseServerSocket " + ip + " " + port);
         ServerSocket testSocket = null;
         try {
             // Try to create a ServerSocket on localhost
@@ -407,9 +411,15 @@ public class SlobServer extends Thread {
             // If we got here, we can create ServerSocket
             return true;
         } catch (SecurityException e) {
+            e.printStackTrace();
             // Network access is blocked by security policy (app settings)
             return false;
+        } catch (SocketException e) {
+            e.printStackTrace();
+            // Network access is blocked by security policy (app settings)
+            return !e.getMessage().contains(" ECONNREFUSED");
         } catch (IOException e) {
+            e.printStackTrace();
             // Other IO errors (port in use, etc.) - but we CAN create sockets
             // This means network access is allowed, just this particular operation failed
             return true;
