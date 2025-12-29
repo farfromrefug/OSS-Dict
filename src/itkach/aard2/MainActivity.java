@@ -1,7 +1,8 @@
 package itkach.aard2;
 
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -19,7 +20,6 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -63,20 +63,41 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     }
 
     private void checkInternetPermission() {
-        // Check if INTERNET permission is granted
-        // Note: On standard Android, INTERNET is a normal permission that's always granted.
-        // However, on some custom ROMs or with firewall apps, network access may be restricted.
-        // This check will help inform users on those systems.
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.INTERNET) 
-                != PackageManager.PERMISSION_GRANTED) {
-            // Show alert dialog explaining the app needs internet permission
+        // Check if network access is restricted for this app
+        // This checks if the user has disabled network access through app info settings,
+        // not just whether the INTERNET permission is granted.
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        if (cm == null) {
+            Log.w(TAG, "ConnectivityManager not available");
+            return;
+        }
+
+        boolean networkRestricted = false;
+        
+        // Check if background data is restricted (API 24+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            int restrictBackgroundStatus = cm.getRestrictBackgroundStatus();
+            if (restrictBackgroundStatus == ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED) {
+                networkRestricted = true;
+                Log.w(TAG, "Network access is restricted for this app");
+            }
+        }
+
+        // Also check if there's any active network available
+        if (!networkRestricted && cm.getActiveNetworkInfo() == null) {
+            // No active network, but this might just be airplane mode or no connectivity
+            // Don't show the warning in this case as it's not app-specific
+            return;
+        }
+
+        if (networkRestricted) {
+            // Show alert dialog explaining the app needs network access
             new AlertDialog.Builder(this)
                     .setTitle(R.string.permission_internet_required_title)
                     .setMessage(R.string.permission_internet_required_message)
                     .setPositiveButton(android.R.string.ok, null)
                     .setCancelable(true)
                     .show();
-            Log.w(TAG, "INTERNET permission not granted - app may not function correctly");
         }
     }
 
