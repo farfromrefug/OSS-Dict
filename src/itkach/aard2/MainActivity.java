@@ -66,8 +66,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     private void checkInternetPermission() {
         // Check if network access is restricted for this app
-        // This checks if the user has disabled network access through app info settings,
-        // not just whether the INTERNET permission is granted.
+        // This checks if the user has disabled "allow network access" in app info settings,
+        // which is different from background data restrictions.
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         if (cm == null) {
             Log.w(TAG, "ConnectivityManager not available");
@@ -76,15 +76,32 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         boolean networkRestricted = false;
         
-        // Check if background data is restricted (API 24+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        // For Android 10+ (API 29+), check if app has network access
+        // This detects when "allow network access" is disabled in app settings
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                android.net.Network activeNetwork = cm.getActiveNetwork();
+                if (activeNetwork != null) {
+                    android.net.NetworkCapabilities capabilities = cm.getNetworkCapabilities(activeNetwork);
+                    // Check if app has permission to use this network
+                    // If capabilities is null, it means the app cannot access the network
+                    if (capabilities == null) {
+                        networkRestricted = true;
+                        Log.w(TAG, "Network access is disabled for this app in settings");
+                    }
+                }
+            } catch (SecurityException e) {
+                // This can happen if network access is completely blocked
+                networkRestricted = true;
+                Log.w(TAG, "Network access is disabled for this app", e);
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            // For older versions, fall back to checking background data restrictions
             int restrictBackgroundStatus = cm.getRestrictBackgroundStatus();
-            // Only show warning if app is restricted and not whitelisted
             if (restrictBackgroundStatus == ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED) {
                 networkRestricted = true;
                 Log.w(TAG, "Network access is restricted for this app");
             }
-            // If status is WHITELISTED, the app has network access despite system restrictions
         }
 
         if (networkRestricted) {
