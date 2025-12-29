@@ -1,7 +1,9 @@
 package itkach.aard2;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -90,7 +92,12 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             new AlertDialog.Builder(this)
                     .setTitle(R.string.permission_internet_required_title)
                     .setMessage(R.string.permission_internet_required_message)
-                    .setPositiveButton(android.R.string.ok, null)
+                    .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                        Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        intent.setData(Uri.parse("package:" + getPackageName()));
+                        startActivity(intent);
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
                     .setCancelable(true)
                     .show();
         }
