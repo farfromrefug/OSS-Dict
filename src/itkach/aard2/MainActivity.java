@@ -64,6 +64,9 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     private void checkInternetPermission() {
         // Check if INTERNET permission is granted
+        // Note: On standard Android, INTERNET is a normal permission that's always granted.
+        // However, on some custom ROMs or with firewall apps, network access may be restricted.
+        // This check will help inform users on those systems.
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.INTERNET) 
                 != PackageManager.PERMISSION_GRANTED) {
             // Show alert dialog explaining the app needs internet permission
@@ -73,6 +76,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                     .setPositiveButton(android.R.string.ok, null)
                     .setCancelable(true)
                     .show();
+            Log.w(TAG, "INTERNET permission not granted - app may not function correctly");
         }
     }
 
