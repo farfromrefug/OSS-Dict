@@ -1,6 +1,8 @@
 package itkach.aard2;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -15,6 +17,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.graphics.Insets;
@@ -40,6 +43,7 @@ import itkach.aard2.dictionaries.DictionaryListFragment;
 import itkach.aard2.lookup.LookupFragment;
 import itkach.aard2.prefs.AppPrefs;
 import itkach.aard2.prefs.SettingsFragment;
+import itkach.aard2.slob.SlobServer;
 import itkach.aard2.utils.ClipboardUtils;
 import itkach.aard2.utils.Utils;
 
@@ -59,12 +63,38 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         return Objects.requireNonNull(getSupportActionBar());
     }
 
+    private void checkInternetPermission() {
+        // Check if the app can use ServerSocket by actually testing it
+        // This is the most reliable way to detect if network access is disabled in app settings
+        boolean canUseSocket = SlobServer.canUseServerSocket(SlobHelper.LOCALHOST, 0);
+        
+        if (!canUseSocket) {
+            Log.w(TAG, "ServerSocket creation blocked - network access is disabled for this app");
+            // Show alert dialog explaining the app needs network access
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.permission_internet_required_title)
+                    .setMessage(R.string.permission_internet_required_message)
+                    .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                        Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        intent.setData(Uri.parse("package:" + getPackageName()));
+                        startActivity(intent);
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setCancelable(true)
+                    .show();
+        }
+    }
+
     public void onCreate(@Nullable Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         Utils.updateNightMode();
         setContentView(R.layout.activity_main);
         setSupportActionBar(findViewById(R.id.toolbar));
+        
+        // Check if INTERNET permission is granted
+        checkInternetPermission();
+        
         appSectionsPagerAdapter = new AppSectionsPagerAdapter(getSupportFragmentManager(), AppPrefs.disableBookmarks(), AppPrefs.disableHistory());
 
         layout = findViewById(R.id.layout);

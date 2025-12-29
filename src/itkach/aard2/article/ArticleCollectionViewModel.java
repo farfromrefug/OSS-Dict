@@ -75,10 +75,10 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
         }
 
     }
-
+    Uri articleUri = null;
     public void loadBlobList(@NonNull Intent intent) {
         ThreadUtils.postOnBackgroundThread(() -> {
-            Uri articleUri = intent.getData();
+            articleUri = intent.getData();
             int currentPosition = intent.getIntExtra("position", 0);
             try {
                 BlobListWrapper result;

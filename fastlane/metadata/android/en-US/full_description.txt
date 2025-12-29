@@ -13,3 +13,5 @@ insensitive.</li>
 <li>Clipboard Auto-Paste</li>
 <li>External Link Sharing</li>
 </ul>
+<p><strong>Network Access Requirement</strong></p>
+<p>This app requires the INTERNET permission to function properly. <strong>However, this is NOT for accessing the internet.</strong> The app is an offline dictionary that works without an internet connection. The INTERNET permission is required because the app uses a local embedded web server (localhost/socket communication) to display dictionary content. On Android, socket communication requires the INTERNET permission even when only communicating locally. Please do not disable network access for this app in your device settings, as this will prevent the app from working correctly.</p>
