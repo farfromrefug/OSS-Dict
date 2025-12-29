@@ -402,7 +402,8 @@ public class SlobServer extends Thread {
         ServerSocket testSocket = null;
         try {
             // Try to create a ServerSocket on localhost
-            testSocket = new ServerSocket(port, 1, InetAddress.getByName(ip));
+            // Using backlog of 0 (system default) since this is just a capability test
+            testSocket = new ServerSocket(port, 0, InetAddress.getByName(ip));
             // If we got here, we can create ServerSocket
             return true;
         } catch (SecurityException e) {
