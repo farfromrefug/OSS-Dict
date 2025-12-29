@@ -134,8 +134,10 @@ share it without opening in a browser first.
 Aard 2 uses local embedded web server to provide article content. This
 permission is necessary to run the server.
 
-Also, articles may reference remote content such as images. This
-permission is necessary to load it.
+**Important:** Even though this app is an offline dictionary and doesn't require an internet connection to function, the INTERNET permission is required for the internal web server to work. The app uses local sockets (localhost communication) which requires this permission on Android. If you disable network access for this app in your device's app info settings, the app will not work correctly, even though it doesn't actually access the internet.
+
+Additionally, articles may reference remote content such as images. This
+permission is necessary to load it when desired.
 
 ### android.permission.ACCESS_NETWORK_STATE
 User chooses when to allow loading remote content: always,
