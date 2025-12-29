@@ -2,11 +2,7 @@ package itkach.aard2;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -47,6 +43,7 @@ import itkach.aard2.dictionaries.DictionaryListFragment;
 import itkach.aard2.lookup.LookupFragment;
 import itkach.aard2.prefs.AppPrefs;
 import itkach.aard2.prefs.SettingsFragment;
+import itkach.aard2.slob.SlobServer;
 import itkach.aard2.utils.ClipboardUtils;
 import itkach.aard2.utils.Utils;
 
@@ -67,48 +64,12 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     }
 
     private void checkInternetPermission() {
-        // Check if network access is restricted for this app
-        // This checks if the user has disabled "allow network access" in app info settings,
-        // which is different from background data restrictions.
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        if (cm == null) {
-            Log.w(TAG, "ConnectivityManager not available");
-            return;
-        }
-
-        boolean networkRestricted = false;
+        // Check if the app can use ServerSocket by actually testing it
+        // This is the most reliable way to detect if network access is disabled in app settings
+        boolean canUseSocket = SlobServer.canUseServerSocket(SlobHelper.LOCALHOST, 0);
         
-        // For Android 10+ (API 29+), check if app has network access
-        // This detects when "allow network access" is disabled in app settings
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            try {
-                Network activeNetwork = cm.getActiveNetwork();
-                if (activeNetwork != null) {
-                    NetworkCapabilities capabilities = cm.getNetworkCapabilities(activeNetwork);
-                    // Check if app has permission to use this network
-                    // If capabilities is null, it means the app cannot access the network
-                    if (capabilities == null) {
-                        networkRestricted = true;
-                        Log.w(TAG, "Network access is disabled for this app in settings");
-                    }
-                }
-                // Note: If activeNetwork is null, it could mean no network is available (device offline)
-                // or network access is blocked. We don't show alert for general offline state.
-            } catch (SecurityException e) {
-                // This can happen if network access is completely blocked
-                networkRestricted = true;
-                Log.w(TAG, "Network access is disabled for this app", e);
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            // For older versions, fall back to checking background data restrictions
-            int restrictBackgroundStatus = cm.getRestrictBackgroundStatus();
-            if (restrictBackgroundStatus == ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED) {
-                networkRestricted = true;
-                Log.w(TAG, "Network access is restricted for this app");
-            }
-        }
-
-        if (networkRestricted) {
+        if (!canUseSocket) {
+            Log.w(TAG, "ServerSocket creation blocked - network access is disabled for this app");
             // Show alert dialog explaining the app needs network access
             new AlertDialog.Builder(this)
                     .setTitle(R.string.permission_internet_required_title)

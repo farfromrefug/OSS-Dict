@@ -390,6 +390,39 @@ public class SlobServer extends Thread {
         return null;
     }
 
+    /**
+     * Test if the app has permission to use ServerSocket.
+     * This is used to detect if network access has been disabled in app settings.
+     * 
+     * @param ip The IP address to test (typically "127.0.0.1" for localhost)
+     * @param port The port to test (typically 0 for any available port)
+     * @return true if ServerSocket can be created, false if network access is blocked
+     */
+    public static boolean canUseServerSocket(@NonNull String ip, int port) {
+        ServerSocket testSocket = null;
+        try {
+            // Try to create a ServerSocket on localhost
+            testSocket = new ServerSocket(port, 1, InetAddress.getByName(ip));
+            // If we got here, we can create ServerSocket
+            return true;
+        } catch (SecurityException e) {
+            // Network access is blocked by security policy (app settings)
+            return false;
+        } catch (IOException e) {
+            // Other IO errors (port in use, etc.) - but we CAN create sockets
+            // This means network access is allowed, just this particular operation failed
+            return true;
+        } finally {
+            if (testSocket != null) {
+                try {
+                    testSocket.close();
+                } catch (IOException ignored) {
+                    // Ignore errors when closing test socket
+                }
+            }
+        }
+    }
+
     @NonNull
     private static String generateAuthKey() {
         SecureRandom rand = new SecureRandom();
