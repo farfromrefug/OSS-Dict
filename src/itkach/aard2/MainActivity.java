@@ -300,7 +300,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     }
 
     private void updateBottomNavLabelState() {
-        Boolean hideLabels = AppPrefs.disableBottomNavLabels();
+        boolean hideLabels = AppPrefs.disableBottomNavLabels();
         bottomNavigationView.setLabelVisibilityMode(hideLabels ? 
             BottomNavigationView.LABEL_VISIBILITY_UNLABELED : 
             BottomNavigationView.LABEL_VISIBILITY_AUTO);
