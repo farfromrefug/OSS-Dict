@@ -56,11 +56,12 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     final static int POS_DISABLE_RANDOM_LOOKUP = 8;
     final static int POS_DISABLE_BOOKMARKS = 9;
     final static int POS_DISABLE_HISTORY = 10;
-    final static int POS_DISABLE_JS = 11;
-    final static int POS_USER_STYLES = 12;
-    final static int POS_CLEAR_CACHE = 13;
-    final static int POS_ABOUT = 14;
-    final static int POS_OPEN_MISSING_BROWSER = 15;
+    final static int POS_DISABLE_TAB_LABELS = 11;
+    final static int POS_DISABLE_JS = 12;
+    final static int POS_USER_STYLES = 13;
+    final static int POS_CLEAR_CACHE = 14;
+    final static int POS_ABOUT = 15;
+    final static int POS_OPEN_MISSING_BROWSER = 16;
 
     SettingsListAdapter(Fragment fragment) {
         this.fragment = fragment;
@@ -76,7 +77,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
 
     @Override
     public int getItemCount() {
-        return 16;
+        return 17;
     }
 
     @Override
@@ -107,6 +108,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_DISABLE_BOOKMARKS:
             case POS_DISABLE_HISTORY:
             case POS_DISABLE_RANDOM_LOOKUP:
+            case POS_DISABLE_TAB_LABELS:
             case POS_DISABLE_JS:
             case POS_REMOTE_CONTENT_CACHE:
             case POS_SHOW_KEYBOARD_LOOKUP:
@@ -163,6 +165,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
                 break;
             case POS_DISABLE_HISTORY:
                 getDisableHistoryView(holder);
+                break;
+            case POS_DISABLE_TAB_LABELS:
+                getDisableTabLabelsView(holder);
                 break;
             case POS_DISABLE_RANDOM_LOOKUP:
                 getDisableRandomLookupView(holder);
@@ -353,6 +358,21 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         });
         view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
         toggle.setChecked(AppPrefs.disableRandomLookup());
+    }
+
+    private void getDisableTabLabelsView(@NonNull ViewHolder holder) {
+        View view = holder.itemView;
+        MaterialSwitch toggle;
+        toggle = view.findViewById(R.id.setting_switch);
+        toggle.setText(R.string.setting_disable_bottom_nav_labels);
+        toggle.setOnClickListener(v -> {
+            boolean currentValue = AppPrefs.disableBottomNavLabels();
+            boolean newValue = !currentValue;
+            AppPrefs.setDisableBottomNavLabels(newValue);
+            toggle.setChecked(newValue);
+        });
+        view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
+        toggle.setChecked(AppPrefs.disableBottomNavLabels());
     }
 
     private void getDisableJavaScriptView(@NonNull ViewHolder holder) {
