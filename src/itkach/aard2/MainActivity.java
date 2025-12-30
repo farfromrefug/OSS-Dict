@@ -106,6 +106,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         bottomNavigationView = findViewById(R.id.bottom_navigation);
         bottomNavigationView.setOnItemSelectedListener(this);
+        updateBottomNavLabelState();
         updateBookmarksTabState();
         updateHistoryTabState();
 
@@ -298,12 +299,21 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         bottomNavigationView.setSelectedItemId(selectedId);
     }
 
+    private void updateBottomNavLabelState() {
+        Boolean hideLabels = AppPrefs.disableBottomNavLabels();
+        bottomNavigationView.setLabelVisibilityMode(hideLabels ? 
+            BottomNavigationView.LABEL_VISIBILITY_UNLABELED : 
+            BottomNavigationView.LABEL_VISIBILITY_AUTO);
+    }
+
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, @Nullable String key) {
         if (Objects.equals(key, AppPrefs.PREF_DISABLE_HISTORY)) {
             updateHistoryTabState();
         } else if (Objects.equals(key, AppPrefs.PREF_DISABLE_BOOKMARKS)) {
             updateBookmarksTabState();
+        } else if (Objects.equals(key, AppPrefs.PREF_DISABLE_BOTTOM_NAV_LABELS)) {
+            updateBottomNavLabelState();
         }
     }
 

@@ -364,15 +364,15 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         View view = holder.itemView;
         MaterialSwitch toggle;
         toggle = view.findViewById(R.id.setting_switch);
-        toggle.setText(R.string.setting_disable_tab_labels);
+        toggle.setText(R.string.setting_disable_bottom_nav_labels);
         toggle.setOnClickListener(v -> {
-            boolean currentValue = ArticleCollectionPrefs.disableTabLabels();
+            boolean currentValue = AppPrefs.disableBottomNavLabels();
             boolean newValue = !currentValue;
-            ArticleCollectionPrefs.setDisableTabLabels(newValue);
+            AppPrefs.setDisableBottomNavLabels(newValue);
             toggle.setChecked(newValue);
         });
         view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
-        toggle.setChecked(ArticleCollectionPrefs.disableTabLabels());
+        toggle.setChecked(AppPrefs.disableBottomNavLabels());
     }
 
     private void getDisableJavaScriptView(@NonNull ViewHolder holder) {

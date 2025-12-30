@@ -109,11 +109,7 @@ public class ArticleCollectionActivity extends AppCompatActivity
             viewPager.setNestedScrollingEnabled(true);
             pagerAdapter = new ArticleCollectionPagerAdapter(blobListWrapper, this);
             viewPager.setAdapter(pagerAdapter);
-            TabLayoutMediator tabLayoutMediator = new TabLayoutMediator(tabs, viewPager, true, (tab, position1) -> {
-                if (!ArticleCollectionPrefs.disableTabLabels()) {
-                    tab.setText(pagerAdapter.getPageTitle(position1));
-                }
-            });
+            TabLayoutMediator tabLayoutMediator = new TabLayoutMediator(tabs, viewPager, true, (tab, position1) -> tab.setText(pagerAdapter.getPageTitle(position1)));
             tabLayoutMediator.attach();
             viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
                 @Override
