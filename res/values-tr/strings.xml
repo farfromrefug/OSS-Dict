@@ -96,4 +96,6 @@
     <string name="msg_no_activity_to_get_content">Dosyayı açmak için kullanılabilir etkinlik yok</string>
     <string name="action_goto_parent_dir">Yukarı</string>
     <string name="setting_open_missing_browser">Eksik maddeleri tarayıcıda aç</string>
+    <string name="permission_internet_required_title">İnternet İzni Gerekli</string>
+    <string name="permission_internet_required_message">Bu uygulamanın düzgün çalışması için internet izni gereklidir. Uygulama interneti doğrudan kullanmasa da, dahili soket iletişimi için bu izne ihtiyaç duyar. Lütfen aygıt ayarlarınızdan internet iznini etkinleştirin.</string>
 </resources>
