@@ -1,5 +1,5 @@
 plugins {
-    id 'com.android.application' version '8.7.3'
+    id 'com.android.application' version '8.13.2'
 }
 
 repositories {
@@ -29,9 +29,6 @@ android {
 
 
     packagingOptions {
-        exclude 'META-INF/*.version'
-        exclude 'META-INF/LICENSE'
-        exclude 'META-INF/NOTICE'
         project("slobj").file("exclude.txt").eachLine {
             line ->
                 println line
@@ -39,13 +36,11 @@ android {
                     exclude line.trim()
                 }
         }
+        resources {
+            excludes += ['META-INF/*.version', 'META-INF/LICENSE', 'META-INF/NOTICE']
+        }
     }
 
-
-
-    lintOptions {
-        abortOnError false
-    }
 
     sourceSets {
         main {
@@ -87,6 +82,9 @@ android {
         includeInApk = false
         // Disables dependency metadata when building Android App Bundles.
         includeInBundle = false
+    }
+    lint {
+        abortOnError false
     }
 }
 
