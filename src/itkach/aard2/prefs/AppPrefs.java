@@ -11,6 +11,7 @@ public class AppPrefs extends Prefs {
     private static final String PREF_UI_THEME = "UITheme";
     public static final String PREF_DISABLE_HISTORY = "disable_history";
     public static final String PREF_DISABLE_BOOKMARKS = "disable_bookmarks";
+    public static final String PREF_DISABLE_BOTTOM_NAV_LABELS = "disable_bottom_nav_labels";
     private static final String PREF_QUERY = "query";
     private static final String PREF_RANDOM_FAV_LOOKUP = "onlyFavDictsForRandomLookup";
     private static final String PREF_USE_VOLUME_FOR_NAV = "useVolumeForNav";
@@ -121,5 +122,13 @@ public class AppPrefs extends Prefs {
 
     public static void setDisableRandomLookup(boolean disable) {
         getInstance().prefs.edit().putBoolean("disable_random_lookup", disable).apply();
+    }
+
+    public static boolean disableBottomNavLabels() {
+        return getInstance().prefs.getBoolean(PREF_DISABLE_BOTTOM_NAV_LABELS, false);
+    }
+
+    public static void setDisableBottomNavLabels(boolean disable) {
+        getInstance().prefs.edit().putBoolean(PREF_DISABLE_BOTTOM_NAV_LABELS, disable).apply();
     }
 }

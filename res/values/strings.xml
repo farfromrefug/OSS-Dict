@@ -125,6 +125,7 @@
     <string name="setting_disable_history">Disable history</string>
     <string name="setting_disable_bookmarks">Disable bookmarks</string>
     <string name="setting_disable_random_lookup">Disable random lookup</string>
+    <string name="setting_disable_bottom_nav_labels">Disable bottom navigation labels</string>
     <string name="setting_remote_content_cache_first">Only load remote content if not cached already</string>
     <string name="permission_internet_required_title">Internet Permission Required</string>
     <string name="permission_internet_required_message">This app requires internet permission to work correctly. Even though the app does not use internet directly, it needs this permission for internal socket communication. Please enable the internet permission in your device settings.</string>
