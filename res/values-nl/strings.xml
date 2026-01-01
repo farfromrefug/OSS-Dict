@@ -98,4 +98,5 @@
     <string name="setting_open_missing_browser">Ontbrekende artikels in browser openen</string>
     <string name="permission_internet_required_title">Internettoegang vereist</string>
     <string name="permission_internet_required_message">Deze app vereist internettoegang om correct te functioneren. Hoewel de app niet direct gebruikmaakt van internet, heeft deze toestemming wel nodig voor interne socketcommunicatie. Schakel de internettoegang in via de instellingen van je apparaat.</string>
+    <string name="setting_disable_bottom_nav_labels">Onderste navigatielabels uitschakelen</string>
 </resources>
