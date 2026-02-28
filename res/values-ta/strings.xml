@@ -95,4 +95,8 @@
     <string name="action_yes">ஆம்</string>
     <string name="setting_show_keyboard_lookup">தேடலுக்கான விசைப்பலகை தானாகவே காண்பி</string>
     <string name="setting_disable_bookmarks">புக்மார்க்குகளை முடக்கு</string>
+    <string name="setting_open_missing_browser">உலாவியில் விடுபட்ட கட்டுரைகளைத் திறக்கவும்</string>
+    <string name="setting_disable_bottom_nav_labels">கீழே உள்ள வழிசெலுத்தல் லேபிள்களை முடக்கு</string>
+    <string name="permission_internet_required_title">இணைய இசைவு தேவை</string>
+    <string name="permission_internet_required_message">இந்த ஆப்ச் சரியாக வேலை செய்ய இணைய இசைவு தேவை. பயன்பாடு நேரடியாக இணையத்தைப் பயன்படுத்தவில்லை என்றாலும், உள் சாக்கெட் தொடர்புக்கு இந்த இசைவு தேவை. உங்கள் சாதன அமைப்புகளில் இணைய அனுமதியை இயக்கவும்.</string>
 </resources>
