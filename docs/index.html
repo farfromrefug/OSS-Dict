@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OSS-Dict — Offline Dictionary Reader for Android</title>
+  <meta name="description" content="OSS-Dict is a free, open-source offline dictionary reader for Android. Fork of Aard 2 with Material Design 3, smart lookup, bookmarks, math support and more." />
+  <meta property="og:title" content="OSS-Dict — Offline Dictionary Reader" />
+  <meta property="og:description" content="Free, open-source offline dictionary reader for Android with Material Design 3." />
+  <meta property="og:image" content="https://raw.githubusercontent.com/farfromrefug/OSS-Dict/master/fastlane/metadata/android/en-US/images/featureGraphic.png" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/farfromrefug/OSS-Dict/master/fastlane/metadata/android/en-US/images/icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:      #1a2a4a;
+      --green-dk:  #1e5f45;
+      --green-md:  #2d6a4f;
+      --green-br:  #52b788;
+      --green-lt:  #b7e4c7;
+      --green-bg:  #d8f3dc;
+      --bg:        #f4f9f6;
+      --card-bg:   #ffffff;
+      --text:      #2c3e50;
+      --muted:     #6b7f72;
+      --radius:    14px;
+      --shadow:    0 4px 24px rgba(0,0,0,.08);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── NAV ─────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(244,249,246,.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--green-lt);
+      padding: 0 1.5rem;
+    }
+    .nav-inner {
+      max-width: 1100px;
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      text-decoration: none;
+    }
+    .nav-brand img { width: 34px; height: 34px; border-radius: 8px; }
+    .nav-brand span {
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--navy);
+    }
+    .nav-brand span em {
+      font-style: normal;
+      color: var(--green-dk);
+    }
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 1.6rem;
+    }
+    nav ul a {
+      text-decoration: none;
+      font-size: .9rem;
+      font-weight: 500;
+      color: var(--muted);
+      transition: color .2s;
+    }
+    nav ul a:hover { color: var(--green-dk); }
+
+    /* ── HERO ─────────────────────────────────────────── */
+    .hero {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem 1.5rem 3rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: center;
+    }
+    .hero-text h1 {
+      font-size: clamp(2.4rem, 5vw, 3.4rem);
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--navy);
+    }
+    .hero-text h1 em {
+      font-style: normal;
+      color: var(--green-dk);
+    }
+    .hero-sub {
+      margin-top: .6rem;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--green-md);
+    }
+    .hero-desc {
+      margin-top: 1rem;
+      font-size: 1rem;
+      color: var(--muted);
+    }
+    .hero-desc a { color: var(--green-dk); text-decoration: none; font-weight: 500; }
+    .hero-desc a:hover { text-decoration: underline; }
+    .badge-row {
+      margin-top: 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .8rem;
+      align-items: center;
+    }
+    .badge-row a img { height: 54px; transition: transform .2s; }
+    .badge-row a:hover img { transform: translateY(-2px); }
+
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+    }
+    .hero-visual img {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 24px;
+      box-shadow: 0 16px 48px rgba(46,107,79,.18);
+    }
+
+    /* ── FEATURE BANNER ───────────────────────────────── */
+    .feature-banner {
+      margin: 0 1.5rem 3rem;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .feature-banner img {
+      width: 100%;
+      display: block;
+    }
+
+    /* ── SECTION SHELL ────────────────────────────────── */
+    section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 3.5rem 1.5rem;
+    }
+    .section-label {
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--green-br);
+      margin-bottom: .4rem;
+    }
+    .section-title {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: .5rem;
+    }
+    .section-body {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 620px;
+      margin-bottom: 2.5rem;
+    }
+
+    /* ── FEATURES GRID ────────────────────────────────── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.2rem;
+    }
+    .feature-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 1.4rem 1.2rem;
+      box-shadow: var(--shadow);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .feature-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(0,0,0,.12);
+    }
+    .feature-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: var(--green-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: .9rem;
+    }
+    .feature-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: var(--green-dk);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .feature-card h3 {
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: .3rem;
+    }
+    .feature-card p {
+      font-size: .84rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── SCREENSHOTS ──────────────────────────────────── */
+    #screenshots { background: none; }
+    .screenshots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.4rem;
+    }
+    .screenshot-item {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: transform .2s;
+    }
+    .screenshot-item:hover { transform: translateY(-4px); }
+    .screenshot-item img {
+      width: 100%;
+      display: block;
+    }
+    .screenshot-item figcaption {
+      padding: .7rem .9rem;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--green-md);
+    }
+
+    /* ── DICTIONARIES ─────────────────────────────────── */
+    #dictionaries { background: none; }
+    .dict-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.2rem;
+    }
+    .dict-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 1.4rem 1.3rem;
+      box-shadow: var(--shadow);
+      transition: transform .2s;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .dict-card:hover { transform: translateY(-3px); }
+    .dict-card-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: var(--green-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .dict-card-icon svg {
+      width: 20px; height: 20px;
+      stroke: var(--green-dk); fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .dict-card h3 {
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: .25rem;
+    }
+    .dict-card p {
+      font-size: .83rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .dict-card .dict-link {
+      display: inline-block;
+      margin-top: .5rem;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--green-dk);
+    }
+
+    /* ── PRIVACY BANNER ───────────────────────────────── */
+    .privacy-banner {
+      max-width: 1100px;
+      margin: 0 auto 4rem;
+      padding: 0 1.5rem;
+    }
+    .privacy-inner {
+      background: linear-gradient(135deg, var(--green-md) 0%, var(--green-dk) 100%);
+      border-radius: var(--radius);
+      padding: 2.2rem 2rem;
+      display: flex;
+      gap: 1.4rem;
+      align-items: flex-start;
+      color: #fff;
+    }
+    .privacy-inner svg {
+      width: 32px; height: 32px; flex-shrink: 0;
+      stroke: #fff; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .privacy-inner h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: .35rem;
+    }
+    .privacy-inner p {
+      font-size: .9rem;
+      opacity: .9;
+      max-width: 740px;
+      line-height: 1.6;
+    }
+    .privacy-inner p strong { color: #a8e6c2; font-weight: 700; }
+
+    /* ── INSTALL CTA ──────────────────────────────────── */
+    .install-cta {
+      max-width: 1100px;
+      margin: 0 auto 4rem;
+      padding: 0 1.5rem;
+      text-align: center;
+    }
+    .install-cta h2 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: .5rem;
+    }
+    .install-cta p {
+      font-size: 1rem;
+      color: var(--muted);
+      margin-bottom: 1.8rem;
+    }
+    .install-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      align-items: center;
+    }
+    .install-badges a img { height: 60px; transition: transform .2s; }
+    .install-badges a:hover img { transform: translateY(-3px); }
+
+    /* ── FOOTER ───────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--green-lt);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      font-size: .84rem;
+      color: var(--muted);
+    }
+    footer a { color: var(--green-dk); text-decoration: none; font-weight: 500; }
+    footer a:hover { text-decoration: underline; }
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.2rem;
+      justify-content: center;
+      margin-bottom: .8rem;
+    }
+
+    /* ── RESPONSIVE ───────────────────────────────────── */
+    @media (max-width: 700px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding-top: 3rem;
+        text-align: center;
+      }
+      .hero-visual { order: -1; }
+      .hero-visual img { max-width: 220px; }
+      .badge-row { justify-content: center; }
+      .feature-banner { margin: 0 0 2rem; border-radius: 0; }
+      nav ul { display: none; }
+      .privacy-inner { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a class="nav-brand" href="#">
+      <img src="https://raw.githubusercontent.com/farfromrefug/OSS-Dict/master/fastlane/metadata/android/en-US/images/icon.png" alt="OSS-Dict icon" />
+      <span>OSS-<em>Dict</em></span>
+    </a>
+    <ul>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#screenshots">Screenshots</a></li>
+      <li><a href="#dictionaries">Dictionaries</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="https://github.com/farfromrefug/OSS-Dict" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-text">
+    <h1>OSS-<em>Dict</em></h1>
+    <p class="hero-sub">Offline Dictionary Reader</p>
+    <p class="hero-desc">
+      A free and open-source offline dictionary reader for Android.
+      Fork of <a href="https://github.com/itkach/aard2-android" target="_blank" rel="noopener">Aard 2</a>
+      with Material Design 3, smart lookup, math rendering, bookmarks and more.
+      <strong>No internet required.</strong>
+    </p>
+    <div class="badge-row" id="install-hero">
+      <a href="https://apt.izzysoft.de/packages/com.akylas.aard2" target="_blank" rel="noopener">
+        <img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" />
+      </a>
+      <a href="https://f-droid.org/packages/com.akylas.aard2" target="_blank" rel="noopener">
+        <img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" />
+      </a>
+      <a href="https://github.com/farfromrefug/OSS-Dict/releases" target="_blank" rel="noopener">
+        <img src="https://raw.githubusercontent.com/farfromrefug/OSS-Dict/master/badge_github.png" alt="Get it on GitHub" />
+      </a>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <img
+      src="https://raw.githubusercontent.com/farfromrefug/OSS-Dict/master/fastlane/metadata/android/en-US/images/phoneScreenshots/lookup.png"
+      alt="OSS-Dict lookup screen"
+    />
+  </div>
+</section>
+
+<!-- FEATURE BANNER -->
+<div class="feature-banner">
+  <img
+    src="https://raw.githubusercontent.com/farfromrefug/OSS-Dict/master/fastlane/metadata/android/en-US/images/featureGraphic.png"
+    alt="OSS-Dict feature graphic"
+  />
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <p class="section-label">What's inside</p>
+  <h2 class="section-title">Everything you need in a dictionary app</h2>
+  <p class="section-body">OSS-Dict packs a full suite of reading and lookup tools into a beautifully crafted, completely offline experience.</p>
+
+  <div class="features-grid">
+
+    <!-- Smart Lookup -->
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+      <h3>Smart Lookup</h3>
+      <p>Search is punctuation, diacritics and case insensitive — find what you mean, not just what you type.</p>
+    </div>
+
+    <!-- Bookmarks & History -->
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <h3>Bookmarks &amp; History</h3>
+      <p>Save articles and revisit your reading history. Filter and sort by time or title, with easy bulk removal.</p>
+    </div>
+
+    <!-- Dictionary Management -->
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      </div>
+      <h3>Dictionary Management</h3>
+      <p>Load multiple dictionaries, reorder them, toggle them on/off or remove them — all without touching files.</p>
+    </div>
+
+    <!-- Custom Stylesheets -->
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </div>
+      <h3>Custom Stylesheets</h3>
+      <p>Apply built-in or your own CSS stylesheets to personalize article appearance exactly to your taste.</p>
+    </div>
+
+    <!-- Math Support -->
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h8M4 17h16"/><line x1="15" y1="10" x2="21" y2="14"/><line x1="21" y1="10" x2="15" y2="14"/></svg>
+      </div>
+      <h3>Beautiful Math Support</h3>
+      <p>Mathematical formulas rendered via MathJax — scalable, styleable and crisp on every screen.</p>
+    </div>
+
+    <!-- Random Article -->
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="4"/><path d="M8 8h.01M12 12h.01M16 16h.01M16 8h.01M8 16h.01"/></svg>
+      </div>
+      <h3>Random Article</h3>
+      <p>Tap the app logo to discover a random entry. Optionally limit random lookups to your favourite dictionaries.</p>
+    </div>
+
+    <!-- Volume Buttons Navigation -->
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      </div>
+      <h3>Volume Button Navigation</h3>
+      <p>Use hardware volume keys to scroll articles or cycle through tabs — hands-free reading made easy.</p>
+    </div>
+
+    <!-- Fullscreen Mode -->
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </div>
+      <h3>Fullscreen Mode</h3>
+      <p>Immerse yourself in content with fullscreen article viewing. Pull down from the top edge to exit.</p>
+    </div>
+
+    <!-- Clipboard Auto-Paste -->
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+      </div>
+      <h3>Clipboard Auto-Paste</h3>
+      <p>Copied text (excluding URLs, emails and phone numbers) is automatically pasted into the search field.</p>
+    </div>
+
+    <!-- External Link Sharing -->
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </div>
+      <h3>External Link Sharing</h3>
+      <p>Long-tap any link in an article to share it directly — perfect for Wikipedia and Wiktionary links.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- SCREENSHOTS -->
+<section id="screenshots">
+  <p class="section-label">See it in action</p>
+  <h2 class="section-title">Clean, modern interface</h2>
+  <p class="section-body">Built with Material Design 3, OSS-Dict is easy to navigate and beautiful on any Android device.</p>
+
+  <div class="screenshots-grid">
+    <figure class="screenshot-item">
+      <img src="https://raw.githubusercontent.com/farfromrefug/OSS-Dict/master/fastlane/metadata/android/en-US/images/phoneScreenshots/lookup.png" alt="Lookup screen" loading="lazy" />
+      <figcaption>Smart Lookup</figcaption>
+    </figure>
+    <figure class="screenshot-item">
+      <img src="https://raw.githubusercontent.com/farfromrefug/OSS-Dict/master/fastlane/metadata/android/en-US/images/phoneScreenshots/dictionaries.png" alt="Dictionary management" loading="lazy" />
+      <figcaption>Dictionary Management</figcaption>
+    </figure>
+    <figure class="screenshot-item">
+      <img src="https://raw.githubusercontent.com/farfromrefug/OSS-Dict/master/fastlane/metadata/android/en-US/images/phoneScreenshots/article_appearance_default.png" alt="Article appearance" loading="lazy" />
+      <figcaption>Article Appearance</figcaption>
+    </figure>
+    <figure class="screenshot-item">
+      <img src="https://raw.githubusercontent.com/farfromrefug/OSS-Dict/master/fastlane/metadata/android/en-US/images/phoneScreenshots/article-integral.png" alt="Math rendering" loading="lazy" />
+      <figcaption>Math Rendering</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- DICTIONARIES -->
+<section id="dictionaries">
+  <p class="section-label">Get dictionaries</p>
+  <h2 class="section-title">Download dictionary files</h2>
+  <p class="section-body">OSS-Dict reads <strong>.slob</strong> dictionary files. Add your own files using Android's file picker — the app never downloads dictionaries itself. Here are the best places to find them:</p>
+
+  <div class="dict-cards">
+
+    <a class="dict-card" href="https://github.com/itkach/slob/wiki/Dictionaries" target="_blank" rel="noopener">
+      <div class="dict-card-icon">
+        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </div>
+      <div>
+        <h3>Slob Wiki — Dictionaries</h3>
+        <p>The official curated list of Slob-format dictionary downloads maintained by the Aard 2 project.</p>
+        <span class="dict-link">Browse dictionaries →</span>
+      </div>
+    </a>
+
+    <!-- <a class="dict-card" href="https://kiwix.org/en/content/" target="_blank" rel="noopener">
+      <div class="dict-card-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </div>
+      <div>
+        <h3>Kiwix Content Library</h3>
+        <p>A large collection of offline content including Wikipedia, Wiktionary and many encyclopedias in multiple languages.</p>
+        <span class="dict-link">Explore content →</span>
+      </div>
+    </a> -->
+
+    <!-- <a class="dict-card" href="https://en.wiktionary.org/wiki/Wiktionary:Main_Page" target="_blank" rel="noopener">
+      <div class="dict-card-icon">
+        <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      </div>
+      <div>
+        <h3>Wiktionary</h3>
+        <p>Multilingual free dictionary with definitions, pronunciations, etymologies and translations for thousands of languages.</p>
+        <span class="dict-link">Visit Wiktionary →</span>
+      </div>
+    </a> -->
+
+    <!-- <a class="dict-card" href="https://www.wikipedia.org/" target="_blank" rel="noopener">
+      <div class="dict-card-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      </div>
+      <div>
+        <h3>Wikipedia</h3>
+        <p>The world's largest encyclopedia, available as offline Slob dumps in many languages via the Slob wiki links.</p>
+        <span class="dict-link">Learn more →</span>
+      </div>
+    </a> -->
+
+  </div>
+</section>
+
+<!-- PRIVACY BANNER -->
+<div class="privacy-banner">
+  <div class="privacy-inner">
+    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    <div>
+      <h3>Offline &amp; Private by Design</h3>
+      <p>
+        OSS-Dict works completely offline. The <strong>INTERNET permission</strong> is required only for the local
+        embedded web server (localhost communication) used to display content — <strong>no data is ever sent online</strong>.
+        Articles may optionally load remote images when you allow it, but all dictionary lookups stay on-device.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- INSTALL CTA -->
+<div class="install-cta" id="install">
+  <h2>Get OSS-Dict</h2>
+  <p>Free and open-source. No ads. No tracking. Works on Android 7+.</p>
+  <div class="install-badges">
+    <a href="https://apt.izzysoft.de/packages/com.akylas.aard2" target="_blank" rel="noopener">
+      <img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" />
+    </a>
+    <a href="https://f-droid.org/packages/com.akylas.aard2" target="_blank" rel="noopener">
+      <img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" />
+    </a>
+    <a href="https://github.com/farfromrefug/OSS-Dict/releases" target="_blank" rel="noopener">
+      <img src="https://raw.githubusercontent.com/farfromrefug/OSS-Dict/master/badge_github.png" alt="Get it on GitHub" />
+    </a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-links">
+    <a href="https://github.com/farfromrefug/OSS-Dict" target="_blank" rel="noopener">Source Code</a>
+    <a href="https://github.com/farfromrefug/OSS-Dict/releases" target="_blank" rel="noopener">Releases</a>
+    <a href="https://github.com/itkach/slob/wiki/Dictionaries" target="_blank" rel="noopener">Dictionaries</a>
+    <a href="https://github.com/farfromrefug/OSS-Dict/issues" target="_blank" rel="noopener">Report a Bug</a>
+    <a href="https://github.com/sponsors/farfromrefug" target="_blank" rel="noopener">❤ Sponsor</a>
+    <a href="https://hosted.weblate.org/engage/ossdict/" target="_blank" rel="noopener">Translate</a>
+    <a href="https://github.com/itkach/aard2-android" target="_blank" rel="noopener">Based on Aard 2</a>
+  </div>
+  <p>OSS-Dict is licensed under the <a href="https://github.com/farfromrefug/OSS-Dict/blob/main/LICENSE.txt" target="_blank" rel="noopener">GPL-3.0 License</a>.</p>
+</footer>
+
+</body>
+</html>
