@@ -105,4 +105,7 @@
     <string name="setting_show_keyboard_lookup">Автоматично показувати клавіатуру для пошуку</string>
     <string name="setting_disable_bookmarks">Вимкнути закладки</string>
     <string name="setting_open_missing_browser">Відкрити відсутні статті у браузері</string>
+    <string name="setting_disable_bottom_nav_labels">Вимкнути мітки нижньої навігації</string>
+    <string name="permission_internet_required_title">Потрібен доступ до Інтернету</string>
+    <string name="permission_internet_required_message">Для правильної роботи цієї програми потрібен дозвіл на доступ до Інтернету. Незважаючи на те, що програма не використовує Інтернет безпосередньо, їй потрібен цей дозвіл для внутрішньої комунікації сокета. Увімкніть дозвіл на доступ до Інтернету в налаштуваннях пристрою.</string>
 </resources>
