@@ -27,6 +27,14 @@
     height="55">](https://github.com/Akylas/OSS-Dict)
 </div>
 
+ 
+#### AppVerifier hashes 
+**OSS-Dict**: 
+```
+com.akylas.aard2
+50:C3:30:1E:18:19:70:BE:7D:50:B4:CD:51:E4:40:60:DB:68:76:EB:F6:AD:B0:2E:48:33:6D:B4:04:8E:57:57
+```
+
 ## Dictionaries
 
    - [Dictionaries](https://github.com/itkach/slob/wiki/Dictionaries)
