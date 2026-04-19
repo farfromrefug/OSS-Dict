@@ -1,17 +1,19 @@
-<p><strong>OSS-Dict</strong> is an offline dictionary reader. It is fork of Aard 2 with new Material design and updated features</p>
-<p><strong>Features</strong></p>
-<ul>
-<li>Lookup queries are punctuation, diacritics and case
-insensitive.</li>
-<li>Bookmarks and History</li>
-<li>Dictionary Management</li>
-<li>Article Appearance: add your custom style sheets</li>
-<li>Math: Mathematical formuals are scalable, styleable, beautiful on any screen</li>
-<li>Random Article</li>
-<li>Volume Buttons Navigation</li>
-<li>Fullscreen Mode</li>
-<li>Clipboard Auto-Paste</li>
-<li>External Link Sharing</li>
-</ul>
-<p><strong>Network Access Requirement</strong></p>
-<p>This app requires the INTERNET permission to function properly. <strong>However, this is NOT for accessing the internet.</strong> The app is an offline dictionary that works without an internet connection. The INTERNET permission is required because the app uses a local embedded web server (localhost/socket communication) to display dictionary content. On Android, socket communication requires the INTERNET permission even when only communicating locally. Please do not disable network access for this app in your device settings, as this will prevent the app from working correctly.</p>
+OSS‑Dict is a fast, privacy-friendly offline dictionary reader — a modern fork of Aard 2 with Material design and enhanced features for comfortable reading and lookup.
+
+Highlights
+
+* Blazing fast searches: punctuation, diacritics and case insensitive — find entries instantly.
+* Bookmarks & history: save and revisit important articles quickly.
+* Dictionary management: import, enable/disable and organize multiple dictionary files.
+* Customizable article appearance: add your own CSS to change fonts, colors and layout.
+* Beautiful math rendering: scalable, styleable formulas that look great on any screen.
+* Random article for discovery, volume-button navigation, and fullscreen reading mode.
+* Clipboard auto-paste and easy external link sharing for fast lookups from other apps.
+
+Why OSS‑Dict? OSS‑Dict is designed to work entirely offline — your dictionaries stay on your device for fast lookups and better privacy. It’s lightweight, configurable, and ideal for travelers, students, and anyone who needs reliable dictionary access without an internet connection.
+
+Network access The app requests the INTERNET permission for internal use by the built-in renderer and to open external links. This permission is not required for core dictionary lookups — the app functions offline with local dictionary files.
+
+Open source OSS‑Dict is open source and available on GitHub. Contributions, bug reports and feature requests are welcome.
+
+Get started Install or import your offline dictionaries, customize the look with CSS if you like, and start searching — fast and offline.
