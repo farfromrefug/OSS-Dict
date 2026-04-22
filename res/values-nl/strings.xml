@@ -77,7 +77,7 @@
     <string name="auto_style_title">Automatisch</string>
     <string name="action_fullscreen">Volledig scherm</string>
     <string name="setting_use_volume_for_nav">Volumeknoppen gebruiken voor navigatie</string>
-    <string name="setting_show_keyboard_lookup">Automatisch toetsenbord laten zien bij opzoeken</string>
+    <string name="setting_show_keyboard_lookup">Automatisch toetsenbord weergeven bij opzoeken</string>
     <string name="setting_enable_force_dark_web_view">Donkere webpagina forceren in donkere modus</string>
     <string name="setting_disable_javascript_title">JavaScript uitschakelen</string>
     <string name="setting_disable_javascript_subtitle">JavaScript uitschakelen heeft onbedoelde neveneffecten, zoals bij het toepassen van aangepaste stijlen en het laden van externe inhoud.</string>
