@@ -64,8 +64,18 @@ public final class MDictDictionary implements Dictionary {
     // -----------------------------------------------------------------------
     /** Sorted list of headwords. Index into this == entry index. */
     @NonNull private final List<String> keys;
-    /** Offset of each entry's record in the *decompressed* record stream. */
+    /**
+     * Offset of each entry's record in the decompressed record stream,
+     * indexed by collation-sorted key position (parallel to {@link #keys}).
+     */
     @NonNull private final long[] recordOffsets;
+    /**
+     * All record offsets sorted in ascending stream order.  Used by
+     * {@link #readRecord} to determine the byte length of each record without
+     * relying on {@code recordOffsets[i+1]}, which after the collation sort no
+     * longer points to the consecutive stream entry.
+     */
+    @NonNull private final long[] sortedOffsets;
 
     // -----------------------------------------------------------------------
     // For decompressing records on demand
@@ -101,6 +111,7 @@ public final class MDictDictionary implements Dictionary {
                              @NonNull Map<String, String> tags,
                              @NonNull List<String> keys,
                              @NonNull long[] recordOffsets,
+                             @NonNull long[] sortedOffsets,
                              @NonNull List<long[]> recordBlockInfo,
                              @NonNull FileChannel fileChannel,
                              long recordBlocksStart) {
@@ -109,6 +120,7 @@ public final class MDictDictionary implements Dictionary {
         this.tags = Collections.unmodifiableMap(tags);
         this.keys = keys;
         this.recordOffsets = recordOffsets;
+        this.sortedOffsets = sortedOffsets;
         this.recordBlockInfo = recordBlockInfo;
         this.fileChannel = fileChannel;
         this.recordBlocksStart = recordBlocksStart;
@@ -324,6 +336,14 @@ public final class MDictDictionary implements Dictionary {
             }
         }
 
+        // Build a sorted copy of the record offsets in ascending stream order.
+        // This is used by readRecord() to find the correct end boundary of each
+        // record: after the collation sort above, recordOffsets[i+1] is the
+        // offset of the collation-next entry, NOT the stream-next entry.
+        // Sorting once here lets readRecord() do a O(log n) lookup.
+        final long[] sortedOffsets = Arrays.copyOf(recordOffsets, entryIdx);
+        Arrays.sort(sortedOffsets);
+
         // ── Record Block Header ──────────────────────────────────────────────
         // v2+:  4 × uint64 = 32 bytes
         // v1.x: 4 × uint32 = 16 bytes
@@ -368,7 +388,8 @@ public final class MDictDictionary implements Dictionary {
         }
 
         return new MDictDictionary(id, filePath, tags, keys,
-                recordOffsets, recordBlockInfo, channel, afterRbHeader + rbiSize);
+                Arrays.copyOf(recordOffsets, entryIdx), sortedOffsets,
+                recordBlockInfo, channel, afterRbHeader + rbiSize);
     }
 
     // -----------------------------------------------------------------------
@@ -377,11 +398,11 @@ public final class MDictDictionary implements Dictionary {
 
     @Override @NonNull public String getId()   { return id; }
     @Override @NonNull public String getLabel() {
-        String label = tags.get("title");
+        String label = tags.get("label");   // remapped from "title" by parseHeaderXml
         return (label != null && !label.isEmpty()) ? label : shortName(filePath);
     }
     @Override @NonNull public String getUri() {
-        String uri = tags.get("website");
+        String uri = tags.get("uri");       // remapped from "website" by parseHeaderXml
         return (uri != null && !uri.isEmpty()) ? uri : ("mdict:" + id);
     }
     @Override @NonNull public Map<String, String> getTags() { return tags; }
@@ -439,8 +460,7 @@ public final class MDictDictionary implements Dictionary {
             int idx = Integer.parseInt(blobId);
             if (idx < 0 || idx >= keys.size()) return null;
             long offset = recordOffsets[idx];
-            long nextOffset = (idx + 1 < keys.size()) ? recordOffsets[idx + 1] : Long.MAX_VALUE;
-            byte[] data = readRecord(offset, nextOffset);
+            byte[] data = readRecord(offset);
             if (data == null) return null;
             // Trim null terminator if present
             int len = data.length;
@@ -486,11 +506,12 @@ public final class MDictDictionary implements Dictionary {
     DictionaryContent getResourceContent(@NonNull String resourcePath) {
         // Normalise: strip leading backslash used by MDict
         String key = resourcePath.startsWith("\\") ? resourcePath.substring(1) : resourcePath;
-        int idx = Collections.binarySearch(keys, key, (a, b) -> a.compareToIgnoreCase(b));
-        if (idx < 0) return null;
+        // Binary search using the same QUATERNARY comparator the keys are sorted by.
+        int idx = findStartIndex(key, Slob.Strength.QUATERNARY);
+        if (idx < 0 || idx >= keys.size()
+                || !keys.get(idx).equalsIgnoreCase(key)) return null;
         long offset = recordOffsets[idx];
-        long nextOffset = (idx + 1 < keys.size()) ? recordOffsets[idx + 1] : Long.MAX_VALUE;
-        byte[] data = readRecord(offset, nextOffset);
+        byte[] data = readRecord(offset);
         if (data == null) return null;
         return new DictionaryContent(guessMimeType(key),
                 ByteBuffer.wrap(data));
@@ -513,10 +534,22 @@ public final class MDictDictionary implements Dictionary {
         return lo;
     }
 
-    /** Reads a decoded record for a given decompressed stream offset. */
+    /**
+     * Reads the decoded record bytes for a given decompressed-stream offset.
+     *
+     * <p>The end boundary is determined by looking up the next offset in
+     * {@link #sortedOffsets} (which holds all record offsets sorted in ascending
+     * stream order).  This is correct regardless of the collation sort order of
+     * {@link #keys}/{@link #recordOffsets}.</p>
+     */
     @Nullable
-    private byte[] readRecord(long offset, long nextOffset) {
-        // Walk record blocks to find which block contains this offset
+    private byte[] readRecord(long offset) {
+        // Determine the end of this record: the next larger offset in the stream.
+        int pos = Arrays.binarySearch(sortedOffsets, offset);
+        long nextOffset = (pos >= 0 && pos + 1 < sortedOffsets.length)
+                ? sortedOffsets[pos + 1] : Long.MAX_VALUE;
+
+        // Walk record blocks to find which block contains this offset.
         long decompStart = 0;
         for (long[] info : recordBlockInfo) {
             long compSize   = info[0];
@@ -524,16 +557,18 @@ public final class MDictDictionary implements Dictionary {
             long fileOffset = info[2];
 
             if (decompStart + decompSize > offset) {
-                // This block contains our record
+                // This block contains our record's start.
                 try {
                     byte[] block = readBlock(fileChannel, fileOffset, compSize, decompSize);
                     int start = (int) (offset - decompStart);
                     int end;
                     if (nextOffset != Long.MAX_VALUE && nextOffset - decompStart <= decompSize) {
+                        // Next record is also within this block.
                         end = (int) (nextOffset - decompStart);
                     } else {
-                        // No nextOffset within this block: find the single-byte
-                        // null terminator that MDict uses to end each record.
+                        // Next record is in a later block (or there is no next record).
+                        // Scan for the single-byte null terminator that MDict uses to
+                        // end each record in the decompressed stream.
                         end = block.length;
                         for (int i = start; i < block.length; i++) {
                             if (block[i] == 0) {

@@ -18,6 +18,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -161,6 +162,28 @@ public final class StarDictDictionary implements Dictionary {
         List<Integer> offList = new ArrayList<>((int) wordCount);
         List<Integer> sizeList = new ArrayList<>((int) wordCount);
         parseIdx(idxData, keys, offList, sizeList);
+
+        // StarDict .idx files sort entries by byte-order (strcmp), which can
+        // differ from Unicode collation.  Re-sort by QUATERNARY so that
+        // findStartIndex's binary search is correct for all languages.
+        if (keys.size() > 1) {
+            final Slob.KeyComparator sortCmp = Slob.Strength.QUATERNARY.comparator;
+            Integer[] sortedIdxs = new Integer[keys.size()];
+            for (int i = 0; i < keys.size(); i++) sortedIdxs[i] = i;
+            final String[] keyArr = keys.toArray(new String[0]);
+            Arrays.sort(sortedIdxs, (a, b) -> sortCmp.compare(
+                    new Slob.Keyed(keyArr[a]), new Slob.Keyed(keyArr[b])));
+            final int[] rawOff  = offList.stream().mapToInt(Integer::intValue).toArray();
+            final int[] rawSize = sizeList.stream().mapToInt(Integer::intValue).toArray();
+            keys.clear();
+            offList.clear();
+            sizeList.clear();
+            for (int j = 0; j < sortedIdxs.length; j++) {
+                keys.add(keyArr[sortedIdxs[j]]);
+                offList.add(rawOff[sortedIdxs[j]]);
+                sizeList.add(rawSize[sortedIdxs[j]]);
+            }
+        }
 
         int[] offsets = offList.stream().mapToInt(Integer::intValue).toArray();
         int[] sizes   = sizeList.stream().mapToInt(Integer::intValue).toArray();
