@@ -29,6 +29,8 @@ import java.util.concurrent.Future;
 import itkach.aard2.article.ArticleCollectionActivity;
 import itkach.aard2.dictionary.DictionaryEntry;
 import itkach.aard2.lookup.LookupListener;
+import itkach.aard2.prefs.AppPrefs;
+import itkach.aard2.utils.ThreadUtils;
 
 public class Application extends android.app.Application {
     private static final String TAG = Application.class.getSimpleName();

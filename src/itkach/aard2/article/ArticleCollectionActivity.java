@@ -58,6 +58,7 @@ import itkach.aard2.prefs.AppPrefs;
 import itkach.aard2.prefs.ArticleCollectionPrefs;
 import itkach.aard2.utils.ThreadUtils;
 import itkach.aard2.utils.Utils;
+import itkach.aard2.widget.ArticleWebView;
 
 public class ArticleCollectionActivity extends AppCompatActivity
         implements SharedPreferences.OnSharedPreferenceChangeListener {
