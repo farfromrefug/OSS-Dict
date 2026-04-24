@@ -1,8 +1,10 @@
 package itkach.aard2.descriptor;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
+import android.provider.OpenableColumns;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -155,9 +157,32 @@ public class SlobDescriptor extends BaseDescriptor {
     public static SlobDescriptor fromUri(@NonNull Context context, @NonNull Uri uri) {
         SlobDescriptor s = new SlobDescriptor();
         s.path = uri.toString();
-        s.format = detectFormat(uri.toString());
+        s.format = detectFormat(context, uri);
         s.loadDictionary(context);
         return s;
+    }
+
+    /**
+     * Detects the dictionary format for a content URI by querying the display
+     * name (actual filename) from the content resolver.  Falls back to the URI
+     * string itself when the display name cannot be obtained.
+     */
+    @NonNull
+    public static String detectFormat(@NonNull Context context, @NonNull Uri uri) {
+        String displayName = null;
+        try (Cursor cursor = context.getContentResolver().query(
+                uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                displayName = cursor.getString(0);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Could not query display name for " + uri, e);
+        }
+        // Fall back to the URI string itself (e.g. file:// URIs that carry the name)
+        if (displayName == null) {
+            displayName = uri.toString();
+        }
+        return detectFormat(displayName);
     }
 
     /**

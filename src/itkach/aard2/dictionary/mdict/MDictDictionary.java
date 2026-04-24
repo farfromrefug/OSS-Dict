@@ -182,7 +182,9 @@ public final class MDictDictionary implements Dictionary {
             long compSize = kbSizes[i * 2];
             long decompSize = kbSizes[i * 2 + 1];
             byte[] block = readBlock(channel, kbPos, compSize, decompSize);
-            kbPos += compSize + 8; // 8 = comp_type(4) + checksum(4)
+            // compSize includes the 8-byte header (comp_type + checksum), so the
+            // total on-disk size of this block is exactly compSize bytes.
+            kbPos += compSize;
             // Parse entries: 8-byte offset + null-terminated UTF-16LE key
             ByteBuffer bb = ByteBuffer.wrap(block);
             bb.order(ByteOrder.BIG_ENDIAN);
