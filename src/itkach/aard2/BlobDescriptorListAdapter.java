@@ -17,10 +17,9 @@ import com.google.android.material.elevation.SurfaceColors;
 
 import itkach.aard2.article.ArticleCollectionActivity;
 import itkach.aard2.descriptor.BlobDescriptor;
-import itkach.aard2.slob.SlobTags;
+import itkach.aard2.dictionary.Dictionary;
 import itkach.aard2.utils.ThreadUtils;
 import itkach.aard2.widget.RecyclerView;
-import itkach.slob.Slob;
 
 public class BlobDescriptorListAdapter extends RecyclerView.Adapter<BlobDescriptorListAdapter.ViewHolder> {
     public interface OnSelectionChangeListener {
@@ -113,11 +112,11 @@ public class BlobDescriptorListAdapter extends RecyclerView.Adapter<BlobDescript
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         BlobDescriptor item = getItem(position);
-        Slob slob = list.resolveOwner(item);
+        Dictionary dict = list.resolveOwner(item);
         CharSequence timestamp = DateUtils.getRelativeTimeSpanString(item.createdAt);
         Context context = holder.itemView.getContext();
         holder.titleView.setText(item.key);
-        holder.sourceView.setText(slob == null ? "???" : slob.getTags().get(SlobTags.TAG_LABEL));
+        holder.sourceView.setText(dict == null ? "???" : dict.getLabel());
         holder.dateView.setText(timestamp);
         holder.cardView.setChecked(checkStates.get(position, false));
         holder.cardView.setOnLongClickListener(v -> {

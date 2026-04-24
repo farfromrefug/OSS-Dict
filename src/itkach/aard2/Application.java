@@ -14,7 +14,6 @@ import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.WorkerThread;
 import androidx.core.view.WindowCompat;
 
 import com.google.android.material.color.DynamicColors;
@@ -23,20 +22,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 import java.util.concurrent.Future;
 
 import itkach.aard2.article.ArticleCollectionActivity;
+import itkach.aard2.dictionary.DictionaryEntry;
 import itkach.aard2.lookup.LookupListener;
-import itkach.aard2.prefs.AppPrefs;
-import itkach.aard2.slob.SlobTags;
-import itkach.aard2.utils.ThreadUtils;
-import itkach.slob.Slob;
-import itkach.slob.Slob.Blob;
 
 public class Application extends android.app.Application {
     private static final String TAG = Application.class.getSimpleName();
@@ -71,7 +63,6 @@ public class Application extends android.app.Application {
                 slobHelper.lastLookupResult.setResult(Collections.emptyIterator());
                 slobHelper.updateSlobs();
                 ThreadUtils.postOnMainThread(() -> {
-                   // enableLinkHandling(slobHelper.getActiveSlobs());
                     slobHelper.bookmarks.notifyDataSetChanged();
                     slobHelper.history.notifyDataSetChanged();
                     lookupAsync(AppPrefs.getLastQuery());
@@ -82,7 +73,7 @@ public class Application extends android.app.Application {
         ThreadUtils.postOnBackgroundThread(() -> slobHelper.init());
     }
 
-    private void setLookupResult(@NonNull String query, Iterator<Slob.Blob> data) {
+    private void setLookupResult(@NonNull String query, Iterator<DictionaryEntry> data) {
         slobHelper.lastLookupResult.setResult(data);
         AppPrefs.setLastQuery(query);
     }
@@ -105,7 +96,7 @@ public class Application extends android.app.Application {
         }
 
         currentLookupTask = ThreadUtils.postOnBackgroundThread(() -> {
-            Iterator<Blob> result = SlobHelper.getInstance().find(query);
+            Iterator<DictionaryEntry> result = SlobHelper.getInstance().find(query);
             if (Thread.currentThread().isInterrupted()) return;
             ThreadUtils.postOnMainThread(() -> {
                 setLookupResult(query, result);
@@ -147,50 +138,6 @@ public class Application extends android.app.Application {
 
     public void removeLookupListener(LookupListener listener) {
         lookupListeners.remove(listener);
-    }
-
-    @WorkerThread
-    protected void enableLinkHandling(Slob[] slobs) {
-        Set<String> hosts = new HashSet<>();
-        for (Slob slob : slobs) {
-            try {
-                String uriValue = slob.getTags().get(SlobTags.TAG_URI);
-                Uri uri = Uri.parse(uriValue);
-                String host = uri.getHost();
-                if (host != null) {
-                    hosts.add(host.toLowerCase(Locale.ROOT));
-                }
-            } catch (Exception ex) {
-                Log.w(TAG, String.format("Dictionary %s (%s) has no uri tag", slob.getId(), slob.getTags()), ex);
-            }
-        }
-
-        long t0 = System.currentTimeMillis();
-        try {
-            PackageManager pm = getPackageManager();
-            PackageInfo p = pm.getPackageInfo(BuildConfig.APPLICATION_ID,
-                    PackageManager.GET_ACTIVITIES | PackageManager.GET_DISABLED_COMPONENTS);
-            Log.d(TAG, "Done getting available activities in " + (System.currentTimeMillis() - t0));
-            t0 = System.currentTimeMillis();
-            if (p.activities != null) {
-                for (ActivityInfo activityInfo : p.activities) {
-                    if (Thread.currentThread().isInterrupted()) break;
-                    if (activityInfo.targetActivity != null) {
-                        boolean enabled = hosts.contains(activityInfo.name);
-                        if (enabled) {
-                            Log.d(TAG, "Enabling links handling for " + activityInfo.name);
-                        }
-                        int setting = enabled ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                                : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
-                        pm.setComponentEnabledSetting(new ComponentName(this, activityInfo.name), setting,
-                                PackageManager.DONT_KILL_APP);
-                    }
-                }
-            }
-        } catch (PackageManager.NameNotFoundException e) {
-            Log.w(TAG, e);
-        }
-        Log.d(TAG, "Done enabling activities in " + (System.currentTimeMillis() - t0));
     }
 
     public static class ArticleCollectionActivityController implements ActivityLifecycleCallbacks {

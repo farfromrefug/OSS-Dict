@@ -31,7 +31,500 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 import itkach.aard2.SlobHelper;
+import itkach.aard2.dictionary.Dictionary;
+import itkach.aard2.dictionary.DictionaryContent;
+import itkach.aard2.dictionary.DictionaryEntry;
+import itkach.aard2.dictionary.SlobDictionary;
 import itkach.slob.Slob;
+
+// With this server, we serve resources with authentication.
+// Format: host:port/auth/dictId/key?blob=<id>#fragment
+// Returns: Content with designated types and caching info.
+public class SlobServer extends Thread {
+    public static final String PAGE_NOT_FOUND = "404";
+    public static final String OKAY = "200";
+    public static final String CREATED = "201";
+    public static final String ACCEPTED = "202";
+    public static final String NO_CONTENT = "204";
+    public static final String PARTIAL_NO_CONTENT = "206";
+    public static final String MULTI_STATUS = "207";
+    public static final String MOVED_PERMANENTLY = "301";
+    public static final String SEE_OTHER = "303";
+    public static final String NOT_MODIFIED = "304";
+    public static final String TEMP_REDIRECT = "307";
+    public static final String BAD_REQUEST = "400";
+    public static final String UNAUTHORIZED_REQUEST = "401";
+    public static final String FORBIDDEN = "403";
+    public static final String NOT_FOUND = "404";
+    public static final String METHOD_NOT_ALLOWED = "405";
+    public static final String NOT_ACCEPTABLE = "406";
+    public static final String REQUEST_TIMEOUT = "408";
+    public static final String CONFLICT = "409";
+    public static final String GONE = "410";
+    public static final String LENGTH_REQUIRED = "411";
+    public static final String PRECONDITION_FAILED = "412";
+
+    public static final String PAYLOAD_TOO_LARGE = "413";
+    public static final String UNSUPPORTED_MEDIA_TYPE = "415";
+    public static final String RANGE_NOT_SATISFIABLE = "416";
+    public static final String EXPECTATION_FAILED = "417";
+    public static final String TOO_MANY_REQUESTS = "429";
+
+    public static final String INTERNAL_ERROR = "500";
+    public static final String NOT_IMPLEMENTED = "501";
+    public static final String SERVICE_UNAVAILABLE = "503";
+    public static final String UNSUPPORTED_HTTP_VERSION = "505";
+
+    private static final String SERVER_NAME = "SlobServer/1.0";
+
+    private static final Object sLock = new Object();
+    @Nullable
+    private static SlobServer sSlobServer;
+
+    @NonNull
+    private final ServerSocket serverSocket;
+    @NonNull
+    private final String authKey;
+    private final boolean keepAlive = true;
+
+    public SlobServer(@NonNull String ip, int port) throws IOException {
+        serverSocket = new ServerSocket(port, 100, InetAddress.getByName(ip));
+        authKey = generateAuthKey();
+        setDaemon(true);
+    }
+
+    @Override
+    public void run() {
+        while (!isInterrupted()) {
+            try {
+                Socket newSocket = serverSocket.accept();
+                Thread newClient = new EchoThread(newSocket);
+                newClient.start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public class EchoThread extends Thread {
+        public static final int BUFFER_SIZE = 1500;
+
+        protected Socket socket;
+        protected boolean nbOpen;
+
+        public EchoThread(Socket clientSocket) {
+            this.socket = clientSocket;
+            this.nbOpen = true;
+        }
+
+        @Override
+        public void run() {
+            if (socket.isClosed() || !socket.isConnected()) {
+                return;
+            }
+            try {
+                DataInputStream in = new DataInputStream(socket.getInputStream());
+                DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+
+                byte[] data = new byte[BUFFER_SIZE];
+                int size;
+
+                while ((size = in.read(data)) != -1) {
+                    String recData = new String(data, 0, size);
+                    String[] headers = recData.split("\\r?\\n");
+                    String[] requestLine = headers[0].split(" ");
+                    if (requestLine.length != 3) {
+                        continue;
+                    }
+                    Request request = new Request(requestLine[0], requestLine[1], requestLine[2]);
+
+                    for (int i = 0; i < headers.length; ++i) {
+                        String s = headers[i];
+                        if (s.isEmpty()) {
+                            StringBuilder sb = new StringBuilder();
+                            for (int j = i; j < headers.length; ++j) {
+                                sb.append(headers[i]);
+                                if (j != (headers.length - 1)) {
+                                    sb.append("\r\n");
+                                }
+                            }
+                            request.body = sb.toString();
+                            break;
+                        }
+                        int colon = s.indexOf(':');
+                        if (colon == -1) {
+                            continue;
+                        }
+                        String name = s.substring(0, colon).trim().toLowerCase(Locale.ROOT);
+                        String value = s.substring(colon + 1).trim();
+                        request.headers.put(name, value);
+                    }
+
+                    processRequest(out, request);
+                }
+            } catch (Exception er) {
+                er.printStackTrace();
+            }
+        }
+    }
+
+    public void processRequest(@NonNull DataOutputStream out, @NonNull Request request) {
+        Uri uri = Uri.parse("http://localhost" + request.uri);
+        List<String> pathSegments = uri.getPathSegments();
+
+        // Path segments:
+        //   [0] auth token
+        //   [1] dictionary ID (or URI for link-following)
+        //   [2..n] key
+        if (pathSegments.size() < 3) {
+            respondWithNotFound(out);
+            return;
+        }
+        String auth = pathSegments.get(0);
+        if (!authKey.equals(auth)) {
+            respondWithBadRequest(out);
+            return;
+        }
+        SlobHelper slobHelper = SlobHelper.getInstance();
+        String dictIdOrUri = pathSegments.get(1);
+        String ifNoneMatch = request.headers.get("if-none-match");
+        StringBuilder key = new StringBuilder();
+        for (int i = 2; i < pathSegments.size(); i++) {
+            if (key.length() > 0) key.append("/");
+            key.append(pathSegments.get(i));
+        }
+
+        // ── Look up by dictionary ID ────────────────────────────────────────
+        Dictionary dict = slobHelper.getDictionary(dictIdOrUri);
+        if (dict != null) {
+            String blobId = uri.getQueryParameter("blob");
+            if (blobId != null) {
+                DictionaryContent content = dict.getContent(blobId);
+                if (content != null) {
+                    respondWithDictionaryContent(out, content, "max-age=31556926", null);
+                    return;
+                }
+                // blobId present but not found – fall through to key lookup
+            }
+            if (getEtag(dict.getId()).equals(ifNoneMatch)) {
+                respondWithNotModified(out);
+                return;
+            }
+            DictionaryEntry entry = getEntryByKey(slobHelper, dict, key.toString());
+            if (entry == null) {
+                respondWithNotFound(out);
+                return;
+            }
+            DictionaryContent content = entry.getContent();
+            if (content == null) {
+                respondWithNotFound(out);
+                return;
+            }
+            respondWithDictionaryContent(out, content, "max-age=31556926", null);
+            return;
+        }
+
+        // ── Fall back to URI-based lookup (link-following) ──────────────────
+        dict = slobHelper.findDictionary(dictIdOrUri);
+        if (dict == null) {
+            respondWithNotFound(out);
+            return;
+        }
+        if (getEtag(dict.getId()).equals(ifNoneMatch)) {
+            respondWithNotModified(out);
+            return;
+        }
+        DictionaryEntry entry = getEntryByKey(slobHelper, dict, key.toString());
+        if (entry == null) {
+            respondWithNotFound(out);
+            return;
+        }
+        DictionaryContent content = entry.getContent();
+        if (content == null) {
+            respondWithNotFound(out);
+            return;
+        }
+        respondWithDictionaryContent(out, content, "max-age=600", getEtag(dict.getId()));
+    }
+
+    @NonNull
+    public String getEtag(@NonNull String dictId) {
+        return String.format(Locale.ROOT, "\"%s\"", dictId);
+    }
+
+    /**
+     * @deprecated Use {@link #getEtag(String)} instead.
+     */
+    @Deprecated
+    @NonNull
+    public String getEtag(UUID slobId) {
+        return getEtag(slobId.toString());
+    }
+
+    /**
+     * Searches for a key across all dictionaries that share the same URI as
+     * {@code dict} (to handle multi-volume / updated dictionaries), returning
+     * the best match.
+     */
+    @Nullable
+    public DictionaryEntry getEntryByKey(@NonNull SlobHelper slobHelper,
+                                          @NonNull Dictionary dict,
+                                          @NonNull String key) {
+        List<Dictionary> candidates = slobHelper.findDictionariesByUri(dict.getUri());
+        if (candidates.isEmpty()) candidates = Collections.singletonList(dict);
+
+        // Sort by creation time (newest first) so we prefer recent volumes
+        candidates.sort((d1, d2) -> {
+            String t1 = d1.getTags().getOrDefault("created.at", "");
+            String t2 = d2.getTags().getOrDefault("created.at", "");
+            return t2.compareTo(t1);
+        });
+
+        // For Slob dictionaries, use the merge-aware Slob.find()
+        boolean allSlob = true;
+        for (Dictionary d : candidates) {
+            if (!(d instanceof SlobDictionary)) { allSlob = false; break; }
+        }
+        if (allSlob && !candidates.isEmpty()) {
+            Slob[] slobs = new Slob[candidates.size()];
+            for (int i = 0; i < candidates.size(); i++) {
+                slobs[i] = ((SlobDictionary) candidates.get(i)).getSlob();
+            }
+            Slob preferred = (dict instanceof SlobDictionary)
+                    ? ((SlobDictionary) dict).getSlob() : null;
+            Iterator<Slob.Blob> result = Slob.find(key, slobs, preferred, Slob.Strength.SECONDARY);
+            if (result.hasNext()) {
+                Slob.Blob blob = result.next();
+                SlobDictionary sd = (SlobDictionary) dict;
+                return sd.fromBlob(blob);
+            }
+            return null;
+        }
+
+        // Generic path: search each candidate
+        for (Dictionary d : candidates) {
+            Iterator<DictionaryEntry> it = d.find(key, Slob.Strength.SECONDARY);
+            if (it.hasNext()) return it.next();
+        }
+        return null;
+    }
+
+    /**
+     * @deprecated Use {@link #getEntryByKey(SlobHelper, Dictionary, String)} instead.
+     */
+    @Deprecated
+    @Nullable
+    public Slob.Blob getBlobByUri(@NonNull SlobHelper slobHelper,
+                                   @NonNull Slob slob,
+                                   @NonNull String key) {
+        List<Slob> candidates = slobHelper.findSlobsByUri(slob.getURI());
+        Collections.sort(candidates, (o1, o2) -> {
+            String t1 = o1.getTags().getOrDefault("created.at", "");
+            String t2 = o2.getTags().getOrDefault("created.at", "");
+            return t2.compareTo(t1);
+        });
+        Iterator<Slob.Blob> result = Slob.find(key, candidates.toArray(new Slob[0]),
+                slob, Slob.Strength.SECONDARY);
+        return result.hasNext() ? result.next() : null;
+    }
+
+    public void respondWithNotModified(@NonNull DataOutputStream out) {
+        PrintWriter writer = getWriter(out);
+        printHeader(writer, NOT_MODIFIED, keepAlive, null, 0, null);
+        writer.append("\r\n");
+        writer.flush();
+    }
+
+    public void respondWithDictionaryContent(@NonNull DataOutputStream out,
+                                              @NonNull DictionaryContent content,
+                                              @NonNull String cacheControl,
+                                              @Nullable String eTag) {
+        PrintWriter writer = getWriter(out);
+        printHeader(writer, OKAY, keepAlive, content.type, content.data.remaining(), cacheControl);
+        if (eTag != null) {
+            printHeader(writer, "ETag", eTag);
+        }
+        writer.append("\r\n");
+        writer.flush();
+        try {
+            Channels.newChannel(out).write(content.data);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * @deprecated Use {@link #respondWithDictionaryContent} instead.
+     */
+    @Deprecated
+    public void respondWithBlobContent(@NonNull DataOutputStream out, @NonNull Slob.Content content,
+                                       @NonNull String cacheControl, @Nullable String eTag) {
+        respondWithDictionaryContent(out,
+                new DictionaryContent(content.type, content.data),
+                cacheControl, eTag);
+    }
+
+    public void respondWithNotFound(@NonNull DataOutputStream out) {
+        String content = "<!DOCTYPE html>" +
+                "<html>" +
+                "<head><title>404 Not Found</title></head>" +
+                "<body><h3>Not found.</h3></body>" +
+                "</html>";
+        PrintWriter writer = getWriter(out);
+        printHeader(writer, NOT_FOUND, keepAlive, "text/html", content.length(), "no-cache");
+        writer.append("\r\n");
+        writer.print(content);
+        writer.flush();
+    }
+
+    public void respondWithBadRequest(@NonNull DataOutputStream out) {
+        String content = "<!DOCTYPE html>" +
+                "<html>" +
+                "<head><title>400 Bad Request</title></head>" +
+                "<body><h3>Bad request.</h3></body>" +
+                "</html>";
+        PrintWriter writer = getWriter(out);
+        printHeader(writer, BAD_REQUEST, keepAlive, "text/html", content.length(), "no-cache");
+        writer.append("\r\n");
+        writer.print(content);
+        writer.flush();
+    }
+
+    private static void printHeader(@NonNull PrintWriter pw, @NonNull String status, boolean keepAlive,
+                                    @Nullable String contentType, int contentLength,
+                                    @Nullable String cacheControl) {
+        SimpleDateFormat gmtFmt = new SimpleDateFormat("E, d MMM yyyy HH:mm:ss 'GMT'", Locale.US);
+        gmtFmt.setTimeZone(TimeZone.getTimeZone("GMT"));
+        pw.append("HTTP/1.1 ")
+                .append(status)
+                .append(" \r\n");
+        printHeader(pw, "Server", SERVER_NAME);
+        printHeader(pw, "Date", gmtFmt.format(new Date()));
+        printHeader(pw, "Connection", (keepAlive ? "keep-alive" : "close"));
+        if (contentType != null) {
+            printHeader(pw, "Content-Type", contentType);
+        }
+        printHeader(pw, "Content-Length", String.valueOf(contentLength));
+        if (cacheControl != null) {
+            printHeader(pw, "Cache-Control", cacheControl);
+        }
+    }
+
+    private static void printHeader(@NonNull PrintWriter pw, @NonNull String key, @NonNull String value) {
+        pw.append(key).append(": ").append(value).append("\r\n");
+    }
+
+    @NonNull
+    private static PrintWriter getWriter(@NonNull DataOutputStream output) {
+        return new PrintWriter(new BufferedWriter(new OutputStreamWriter(output)), false);
+    }
+
+    public static void startServer(String ip, int port) throws IOException {
+        synchronized (sLock) {
+            if (sSlobServer != null && sSlobServer.isAlive()) {
+                return;
+            }
+            sSlobServer = new SlobServer(ip, port);
+            sSlobServer.start();
+            System.out.println("Server Started");
+        }
+    }
+
+    public static void stopServer() {
+        synchronized (sLock) {
+            if (sSlobServer != null && sSlobServer.isAlive()) {
+                sSlobServer.interrupt();
+            }
+            System.out.println("Server stopped");
+        }
+    }
+
+    @Nullable
+    public static String getAuthKey() {
+        synchronized (sLock) {
+            if (sSlobServer != null) {
+                return sSlobServer.authKey;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Test if the app has permission to use ServerSocket.
+     */
+    public static boolean canUseServerSocket(@NonNull String ip, int port) {
+        Log.d("SlobServer", "canUseServerSocket " + ip + " " + port);
+        ServerSocket testSocket = null;
+        try {
+            testSocket = new ServerSocket(port, 0, InetAddress.getByName(ip));
+            return true;
+        } catch (SecurityException e) {
+            e.printStackTrace();
+            return false;
+        } catch (SocketException e) {
+            e.printStackTrace();
+            return !e.getMessage().contains(" ECONNREFUSED");
+        } catch (IOException e) {
+            e.printStackTrace();
+            return true;
+        } finally {
+            if (testSocket != null) {
+                try {
+                    testSocket.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+    }
+
+    @NonNull
+    private static String generateAuthKey() {
+        SecureRandom rand = new SecureRandom();
+        byte[] authBytes = new byte[rand.nextInt(16) + 5];
+        rand.nextBytes(authBytes);
+        return new String(encodeToHex(authBytes, 0, authBytes.length));
+    }
+
+    private static final char[] DIGITS = {
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+    };
+
+    @NonNull
+    private static char[] encodeToHex(@NonNull byte[] data, int offset, int len) {
+        char[] result = new char[len * 2];
+        for (int i = 0; i < len; i++) {
+            byte b = data[offset + i];
+            int resultIndex = 2 * i;
+            result[resultIndex] = (DIGITS[(b >> 4) & 0x0f]);
+            result[resultIndex + 1] = (DIGITS[b & 0x0f]);
+        }
+        return result;
+    }
+
+    private static class Request {
+        @NonNull
+        public final String method;
+        @NonNull
+        public final String uri;
+        @NonNull
+        public final String httpVersion;
+        @NonNull
+        public Map<String, String> headers = new HashMap<>();
+        @Nullable
+        public String body;
+
+        public Request(@NonNull String method, @NonNull String requestUri, @NonNull String httpVersion) {
+            this.method = method;
+            this.uri = requestUri;
+            this.httpVersion = httpVersion;
+        }
+    }
+}
 
 // With this server, we only serve the resources with authentication
 // Format: host:port/auth/slobId/key?blob=<id>#fragment

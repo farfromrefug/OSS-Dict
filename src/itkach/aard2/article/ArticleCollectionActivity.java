@@ -53,13 +53,11 @@ import itkach.aard2.BuildConfig;
 import itkach.aard2.MainActivity;
 import itkach.aard2.R;
 import itkach.aard2.SlobHelper;
+import itkach.aard2.dictionary.DictionaryEntry;
 import itkach.aard2.prefs.AppPrefs;
 import itkach.aard2.prefs.ArticleCollectionPrefs;
-import itkach.aard2.slob.SlobTags;
 import itkach.aard2.utils.ThreadUtils;
 import itkach.aard2.utils.Utils;
-import itkach.aard2.widget.ArticleWebView;
-import itkach.slob.Slob;
 
 public class ArticleCollectionActivity extends AppCompatActivity
         implements SharedPreferences.OnSharedPreferenceChangeListener {
@@ -205,15 +203,15 @@ public class ArticleCollectionActivity extends AppCompatActivity
     }
 
     private void updateTitle(int position) {
-        Slob.Blob blob = pagerAdapter.get(position);
+        DictionaryEntry entry = pagerAdapter.get(position);
         CharSequence pageTitle = pagerAdapter.getPageTitle(position);
         ActionBar actionBar = requireActionBar();
-        if (blob != null) {
-            String dictLabel = blob.owner.getTags().get(SlobTags.TAG_LABEL);
+        if (entry != null) {
+            String dictLabel = entry.owner.getLabel();
             actionBar.setTitle(dictLabel);
             if (!AppPrefs.disableHistory() && !isHistory) {
                 SlobHelper slobHelper = SlobHelper.getInstance();
-                slobHelper.history.add(slobHelper.getHttpUri(blob));
+                slobHelper.history.add(slobHelper.getHttpUri(entry));
             }
         } else {
             actionBar.setTitle("???");
@@ -419,9 +417,9 @@ public class ArticleCollectionActivity extends AppCompatActivity
         public ArticleFragment createFragment(int i) {
             ArticleFragment fragment = new ArticleFragment();
 
-            Slob.Blob blob = get(i);
-            if (blob != null) {
-                Uri articleUri = SlobHelper.getInstance().getHttpUri(blob);
+            DictionaryEntry entry = get(i);
+            if (entry != null) {
+                Uri articleUri = SlobHelper.getInstance().getHttpUri(entry);
                 Bundle args = new Bundle();
                 args.putParcelable(ArticleFragment.ARG_URI, articleUri);
                 fragment.setArguments(args);
@@ -434,7 +432,7 @@ public class ArticleCollectionActivity extends AppCompatActivity
             return blobListWrapper.size();
         }
 
-        public Slob.Blob get(int position) {
+        public DictionaryEntry get(int position) {
             return blobListWrapper.get(position);
         }
 
