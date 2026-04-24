@@ -144,9 +144,24 @@ public final class MDictDictionary implements Dictionary {
         // Header is a UTF-16LE XML string
         String headerXml = StandardCharsets.UTF_16LE.decode(headerBuf).toString();
 
+        // Some MDict creators (e.g. MdxBuilder) store headerLen as the number of
+        // UTF-16 *characters* rather than bytes.  The actual on-disk XML is then
+        // headerLen*2 bytes, so afterHeader computed with just headerLen puts us in
+        // the middle of the XML string (producing garbage KBH values).
+        // Detect this by checking whether the decoded string ends with the closing
+        // "/>" of the self-closing <Dictionary .../> tag.  If not, the data was
+        // truncated and we need to re-read with the doubled byte count.
+        long actualHeaderBytes = headerLen;
+        if (!headerXml.trim().endsWith("/>") && !headerXml.trim().endsWith(">")) {
+            actualHeaderBytes = (long) headerLen * 2;
+            ByteBuffer fullBuf = ByteBuffer.allocate((int) actualHeaderBytes);
+            readFully(channel, fullBuf, 4);
+            headerXml = StandardCharsets.UTF_16LE.decode(fullBuf).toString();
+        }
+
         // 4 bytes Adler32 checksum – skip
-        // total header block size = 4 (length) + headerLen + 4 (checksum)
-        long afterHeader = 4L + headerLen + 4L;
+        // total header block size = 4 (length) + actualHeaderBytes + 4 (checksum)
+        long afterHeader = 4L + actualHeaderBytes + 4L;
 
         // Parse XML attributes from header
         Map<String, String> tags = parseHeaderXml(headerXml, filePath);
