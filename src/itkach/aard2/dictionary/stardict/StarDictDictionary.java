@@ -44,6 +44,7 @@ import itkach.slob.Slob;
  *   <li>v2.4.2 dictionaries (the modern standard)</li>
  *   <li>Uncompressed {@code .dict} content files</li>
  *   <li>GZIP-compressed {@code .dict.dz} content files</li>
+ *   <li>GZIP-compressed {@code .idx.gz} index files</li>
  *   <li>Synonym files {@code .syn}</li>
  *   <li>HTML and plain-text content types</li>
  * </ul>
@@ -133,12 +134,27 @@ public final class StarDictDictionary implements Dictionary {
         Map<String, String> tags = buildTags(ifoTags, basePath);
         String id = deterministicUuid(ifoPath).toString();
 
-        // ── .idx ──────────────────────────────────────────────────────────
+        // ── .idx (.idx.gz) ────────────────────────────────────────────────
         String idxPath = basePath + ".idx";
         Uri idxUri = deriveUri(ifoUri, ".ifo", ".idx");
-        byte[] idxData;
-        try (InputStream is = context.getContentResolver().openInputStream(idxUri)) {
-            idxData = readAll(is);
+        byte[] idxData = null;
+
+        // Try .idx.gz first (gzip-compressed index), then fall back to plain .idx.
+        Uri idxGzUri = deriveUri(ifoUri, ".ifo", ".idx.gz");
+        try {
+            InputStream gzIs = context.getContentResolver().openInputStream(idxGzUri);
+            if (gzIs != null) {
+                try (GZIPInputStream gzip = new GZIPInputStream(gzIs)) {
+                    idxData = readAll(gzip);
+                }
+            }
+        } catch (Exception ignored) {
+            // .idx.gz not present or not readable – try plain .idx below
+        }
+        if (idxData == null) {
+            try (InputStream is = context.getContentResolver().openInputStream(idxUri)) {
+                idxData = readAll(is);
+            }
         }
 
         List<String> keys = new ArrayList<>((int) wordCount);

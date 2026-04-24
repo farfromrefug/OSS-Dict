@@ -14,8 +14,10 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -78,6 +80,19 @@ public final class MDictDictionary implements Dictionary {
     @Nullable private MDictDictionary mddDictionary;
 
     // -----------------------------------------------------------------------
+    // Resource lifetime management (fromUri path only)
+    // -----------------------------------------------------------------------
+    // These references prevent the underlying file descriptor from being closed
+    // prematurely by the garbage collector.  ParcelFileDescriptor.finalize()
+    // closes the FD it owns; FileInputStream.finalize() does the same for the
+    // FD it wraps.  If either is collected while fileChannel is still in use,
+    // subsequent channel.read() calls will throw ClosedChannelException.
+    @SuppressWarnings("FieldCanBeLocal")
+    @Nullable private ParcelFileDescriptor pfd;
+    @SuppressWarnings("FieldCanBeLocal")
+    @Nullable private FileInputStream fis;
+
+    // -----------------------------------------------------------------------
     // Construction
     // -----------------------------------------------------------------------
 
@@ -122,7 +137,12 @@ public final class MDictDictionary implements Dictionary {
         if (pfd == null) throw new IOException("Cannot open: " + filePath);
         FileInputStream fis = new FileInputStream(pfd.getFileDescriptor());
         FileChannel channel = fis.getChannel();
-        return parse(channel, filePath);
+        MDictDictionary dict = parse(channel, filePath);
+        // Keep pfd and fis alive for the lifetime of the dictionary so that
+        // the underlying file descriptor is not closed by GC finalizers.
+        dict.pfd = pfd;
+        dict.fis = fis;
+        return dict;
     }
 
     @NonNull
@@ -283,6 +303,27 @@ public final class MDictDictionary implements Dictionary {
         }
         long afterKeyBlocks = kbPos;
 
+        // Sort keys and their corresponding record-offsets by QUATERNARY Unicode
+        // collation so that binary search with any Slob.Strength comparator works
+        // correctly.  MDict files sort keys in the file's native encoding byte
+        // order (e.g. UTF-16LE or GBK byte order), which can differ significantly
+        // from Unicode collation order, causing lookups to fail for non-ASCII
+        // dictionaries.
+        if (entryIdx > 1) {
+            final Slob.KeyComparator sortCmp = Slob.Strength.QUATERNARY.comparator;
+            Integer[] sortedIdxs = new Integer[entryIdx];
+            for (int i = 0; i < entryIdx; i++) sortedIdxs[i] = i;
+            final String[] keyArr = keys.toArray(new String[0]);
+            final long[] offsCopy = Arrays.copyOf(recordOffsets, entryIdx);
+            Arrays.sort(sortedIdxs, (a, b) -> sortCmp.compare(
+                    new Slob.Keyed(keyArr[a]), new Slob.Keyed(keyArr[b])));
+            keys.clear();
+            for (int j = 0; j < entryIdx; j++) {
+                keys.add(keyArr[sortedIdxs[j]]);
+                recordOffsets[j] = offsCopy[sortedIdxs[j]];
+            }
+        }
+
         // ── Record Block Header ──────────────────────────────────────────────
         // v2+:  4 × uint64 = 32 bytes
         // v1.x: 4 × uint32 = 16 bytes
@@ -404,7 +445,12 @@ public final class MDictDictionary implements Dictionary {
             // Trim null terminator if present
             int len = data.length;
             while (len > 0 && data[len - 1] == 0) len--;
-            String html = new String(data, 0, len, StandardCharsets.UTF_8);
+            // Use the dictionary's encoding for content (same as for keys).
+            String enc = tags.getOrDefault("encoding", "UTF-8");
+            if (enc.isEmpty()) enc = "UTF-8";
+            Charset cs;
+            try { cs = Charset.forName(enc); } catch (Exception e) { cs = StandardCharsets.UTF_8; }
+            String html = new String(data, 0, len, cs);
             return new DictionaryContent("text/html; charset=utf-8",
                     ByteBuffer.wrap(html.getBytes(StandardCharsets.UTF_8)));
         } catch (NumberFormatException e) {
@@ -486,10 +532,11 @@ public final class MDictDictionary implements Dictionary {
                     if (nextOffset != Long.MAX_VALUE && nextOffset - decompStart <= decompSize) {
                         end = (int) (nextOffset - decompStart);
                     } else {
-                        // find null terminator
+                        // No nextOffset within this block: find the single-byte
+                        // null terminator that MDict uses to end each record.
                         end = block.length;
-                        for (int i = start; i < block.length - 1; i++) {
-                            if (block[i] == 0 && block[i + 1] == 0) {
+                        for (int i = start; i < block.length; i++) {
+                            if (block[i] == 0) {
                                 end = i;
                                 break;
                             }
