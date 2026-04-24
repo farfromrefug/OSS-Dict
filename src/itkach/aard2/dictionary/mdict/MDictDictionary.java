@@ -139,24 +139,31 @@ public final class MDictDictionary implements Dictionary {
             throw new IOException("Invalid MDX header length: " + headerLen);
         }
 
+        // The MDict format stores headerLen as the number of *bytes* in the UTF-16LE XML
+        // string (including the 2-byte null terminator).  Some older tools mistakenly
+        // store it as a character count; in that case headerLen*2 is the byte count.
+        // We detect which convention is in use by checking whether decoding headerLen
+        // bytes as UTF-16LE produces a valid XML fragment (ends with '>' before any
+        // null padding).  If not, we try headerLen*2 bytes.
         ByteBuffer headerBuf = ByteBuffer.allocate(headerLen);
         readFully(channel, headerBuf, 4);
         // Header is a UTF-16LE XML string
         String headerXml = StandardCharsets.UTF_16LE.decode(headerBuf).toString();
 
-        // Some MDict creators (e.g. MdxBuilder) store headerLen as the number of
-        // UTF-16 *characters* rather than bytes.  The actual on-disk XML is then
-        // headerLen*2 bytes, so afterHeader computed with just headerLen puts us in
-        // the middle of the XML string (producing garbage KBH values).
-        // Detect this by checking whether the decoded string ends with the closing
-        // "/>" of the self-closing <Dictionary .../> tag.  If not, the data was
-        // truncated and we need to re-read with the doubled byte count.
         long actualHeaderBytes = headerLen;
-        if (!headerXml.trim().endsWith("/>") && !headerXml.trim().endsWith(">")) {
+        // Truncate at the closing '>' to strip null terminator and any padding bytes.
+        int closeAngle = headerXml.lastIndexOf('>');
+        if (closeAngle >= 0) {
+            headerXml = headerXml.substring(0, closeAngle + 1);
+        } else {
+            // No '>' found: headerLen was likely in characters, not bytes.
+            // Re-read using headerLen*2 bytes.
             actualHeaderBytes = (long) headerLen * 2;
             ByteBuffer fullBuf = ByteBuffer.allocate((int) actualHeaderBytes);
             readFully(channel, fullBuf, 4);
             headerXml = StandardCharsets.UTF_16LE.decode(fullBuf).toString();
+            closeAngle = headerXml.lastIndexOf('>');
+            if (closeAngle >= 0) headerXml = headerXml.substring(0, closeAngle + 1);
         }
 
         // 4 bytes Adler32 checksum – skip
@@ -166,11 +173,19 @@ public final class MDictDictionary implements Dictionary {
         // Parse XML attributes from header
         Map<String, String> tags = parseHeaderXml(headerXml, filePath);
 
+        // Determine the key text encoding (default UTF-8 for MDX v2).
+        String keyEncoding = tags.getOrDefault("encoding", "UTF-8");
+        if (keyEncoding.isEmpty()) keyEncoding = "UTF-8";
+        final boolean keyIsUtf16le = "UTF-16LE".equalsIgnoreCase(keyEncoding);
+        final java.nio.charset.Charset keyCharset = keyIsUtf16le
+                ? StandardCharsets.UTF_16LE
+                : java.nio.charset.Charset.forName(keyEncoding);
+
         // Derive a stable UUID from the file path
         String id = deterministicUuid(filePath).toString();
 
         // ── Key Block Header ─────────────────────────────────────────────────
-        // (8 longs, all big-endian)
+        // (5 big-endian u64 fields + 4-byte Adler32 checksum = 44 bytes total)
         ByteBuffer kbh = ByteBuffer.allocate(40);
         kbh.order(ByteOrder.BIG_ENDIAN);
         readFully(channel, kbh, afterHeader);
@@ -179,12 +194,12 @@ public final class MDictDictionary implements Dictionary {
         /* long kbiDecompSize = */ kbh.getLong();
         long kbiSize         = kbh.getLong();
         /* long kbSize        = */ kbh.getLong();
-        // 4 bytes CRC32 – skip
+        // 4 bytes Adler32 checksum – skip
         long afterKbHeader   = afterHeader + 40 + 4;
 
         // ── Key Block Info ───────────────────────────────────────────────────
-        // Compressed with ZLIB (2-byte comp type + 4-byte checksum + data)
-        long[] kbSizes = readKeyBlockInfo(channel, afterKbHeader, (int) numKeyBlocks, kbiSize);
+        long[] kbSizes = readKeyBlockInfo(channel, afterKbHeader, (int) numKeyBlocks, kbiSize,
+                keyIsUtf16le);
         long afterKbi = afterKbHeader + kbiSize;
 
         // ── Key Blocks ───────────────────────────────────────────────────────
@@ -197,26 +212,38 @@ public final class MDictDictionary implements Dictionary {
             long compSize = kbSizes[i * 2];
             long decompSize = kbSizes[i * 2 + 1];
             byte[] block = readBlock(channel, kbPos, compSize, decompSize);
-            // compSize includes the 8-byte header (comp_type + checksum), so the
-            // total on-disk size of this block is exactly compSize bytes.
+            // compSize includes the 8-byte header (comp_type + checksum).
             kbPos += compSize;
-            // Parse entries: 8-byte offset + null-terminated UTF-16LE key
+            // Parse entries: 8-byte big-endian offset + null-terminated key string.
+            // The null terminator is 1 byte for single-byte encodings (UTF-8, GBK…)
+            // or 2 bytes (U+0000) for UTF-16LE.
             ByteBuffer bb = ByteBuffer.wrap(block);
             bb.order(ByteOrder.BIG_ENDIAN);
-            while (bb.remaining() >= 9) {
+            while (bb.remaining() >= (keyIsUtf16le ? 10 : 9)) {
                 long offset = bb.getLong();
-                // Read null-terminated UTF-16LE string
                 int start = bb.position();
-                // find 2-byte null terminator
-                while (bb.remaining() >= 2) {
-                    byte lo = bb.get();
-                    byte hi = bb.get();
-                    if (lo == 0 && hi == 0) break;
+                String key;
+                if (keyIsUtf16le) {
+                    // find 2-byte null terminator (U+0000 in UTF-16LE)
+                    while (bb.remaining() >= 2) {
+                        byte lo = bb.get();
+                        byte hi = bb.get();
+                        if (lo == 0 && hi == 0) break;
+                    }
+                    int end = bb.position() - 2;
+                    if (end > start) {
+                        key = new String(block, start, end - start, StandardCharsets.UTF_16LE);
+                    } else {
+                        key = "";
+                    }
+                } else {
+                    // find single-byte null terminator
+                    while (bb.hasRemaining()) {
+                        if (bb.get() == 0) break;
+                    }
+                    int end = bb.position() - 1;
+                    key = end > start ? new String(block, start, end - start, keyCharset) : "";
                 }
-                int end = bb.position() - 2; // exclude null terminator
-                byte[] keyBytes = new byte[end - start];
-                System.arraycopy(block, start, keyBytes, 0, end - start);
-                String key = new String(keyBytes, StandardCharsets.UTF_16LE).trim();
                 if (!key.isEmpty() && entryIdx < (int) numEntries) {
                     keys.add(key);
                     recordOffsets[entryIdx] = offset;
@@ -440,12 +467,12 @@ public final class MDictDictionary implements Dictionary {
                                      long fileOffset,
                                      long compSize,
                                      long decompSize) throws IOException {
-        // 4-byte compression type + 4-byte checksum + data
+        // Block header: 4-byte compression type (little-endian u32) + 4-byte checksum
+        // Only the lowest nibble of the first byte encodes the compression method:
+        //   0x00 = none, 0x01 = LZO, 0x02 = ZLIB
         ByteBuffer header = ByteBuffer.allocate(8);
-        header.order(ByteOrder.BIG_ENDIAN);
         readFully(channel, header, fileOffset);
-        int compType = header.getInt();
-        /* int checksum = */ header.getInt();
+        int compType = header.get(0) & 0x0f; // LE u32, lowest nibble
 
         long dataSize = compSize - 8;
         byte[] compressed = new byte[(int) dataSize];
@@ -471,14 +498,14 @@ public final class MDictDictionary implements Dictionary {
     private static long[] readKeyBlockInfo(@NonNull FileChannel channel,
                                             long offset,
                                             int numBlocks,
-                                            long kbiSize) throws IOException {
-        // KBI is compressed with ZLIB
+                                            long kbiSize,
+                                            boolean keysAreUtf16le) throws IOException {
+        // KBI block header: 4-byte compression type (LE u32) + 4-byte checksum + data
         ByteBuffer raw = ByteBuffer.allocate((int) kbiSize);
         readFully(channel, raw, offset);
-        // 4-byte comp type + 4-byte checksum + data
-        raw.order(ByteOrder.BIG_ENDIAN);
-        int compType = raw.getInt();
-        /* int checksum = */ raw.getInt();
+        // Compression method is in the lowest nibble of the first byte (LE u32).
+        int compType = raw.get(0) & 0x0f;
+        raw.position(8); // skip 4-byte enc field + 4-byte checksum
         byte[] data = new byte[raw.remaining()];
         raw.get(data);
 
@@ -489,16 +516,14 @@ public final class MDictDictionary implements Dictionary {
             decompressed = data;
         }
 
-        // Parse: for each block (num_entries:8, first_size:2, first:?, last_size:2, last:?, comp:8, decomp:8)
-        // We only care about comp_size and decomp_size per block.
+        // Each entry: num_entries(8) + first_key(2+len+1) + last_key(2+len+1) + comp_size(8) + decomp_size(8)
         long[] sizes = new long[numBlocks * 2];
         ByteBuffer bb = ByteBuffer.wrap(decompressed);
         bb.order(ByteOrder.BIG_ENDIAN);
         for (int i = 0; i < numBlocks && bb.remaining() >= 8; i++) {
             /* long numEntries = */ bb.getLong();
-            // first key head word size (2 bytes) + string + last key head word size (2 bytes) + string
-            skipKeyString(bb);
-            skipKeyString(bb);
+            skipKeyString(bb, keysAreUtf16le);
+            skipKeyString(bb, keysAreUtf16le);
             long cs = bb.getLong();
             long ds = bb.getLong();
             sizes[i * 2]     = cs;
@@ -507,11 +532,12 @@ public final class MDictDictionary implements Dictionary {
         return sizes;
     }
 
-    private static void skipKeyString(@NonNull ByteBuffer bb) {
+    private static void skipKeyString(@NonNull ByteBuffer bb, boolean utf16le) {
         if (bb.remaining() < 2) return;
-        int len = bb.getShort() & 0xFFFF; // len = number of characters (code units)
-        // UTF-16LE: each character is 2 bytes, plus 2-byte null terminator
-        int bytesToSkip = len * 2 + 2;
+        int len = bb.getShort() & 0xFFFF; // number of encoding units (chars for UTF-16LE, bytes for others)
+        // For single-byte encodings: len bytes + 1 null byte = len+1 bytes total
+        // For UTF-16LE: (len+1) code units * 2 bytes each = (len+1)*2 bytes total
+        int bytesToSkip = utf16le ? (len + 1) * 2 : (len + 1);
         if (bb.remaining() >= bytesToSkip) {
             bb.position(bb.position() + bytesToSkip);
         }
