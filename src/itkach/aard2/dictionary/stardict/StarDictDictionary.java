@@ -388,6 +388,12 @@ public final class StarDictDictionary implements Dictionary {
     }
 
     @NonNull
+    /**
+     * Builds a simplified deterministic UUID from the file path.
+     * Not a standards-compliant version-5 UUID (no SHA-1 over a namespace);
+     * the RFC 4122 version (5) and variant (10xx) bits are applied purely for
+     * well-formed UUID string output.
+     */
     private static UUID deterministicUuid(@NonNull String path) {
         byte[] bytes = path.getBytes(StandardCharsets.UTF_8);
         long most = 0, least = 0;
@@ -397,6 +403,7 @@ public final class StarDictDictionary implements Dictionary {
         }
         most  ^= path.hashCode();
         least ^= path.hashCode() * 0x9e3779b97f4a7c15L;
+        // Apply RFC 4122 version (5) and variant (10xx) bits
         most  = (most  & 0xFFFFFFFFFFFF0FFFL) | 0x0000000000005000L;
         least = (least & 0x3FFFFFFFFFFFFFFFL) | 0x8000000000000000L;
         return new UUID(most, least);

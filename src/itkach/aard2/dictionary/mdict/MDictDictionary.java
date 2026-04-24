@@ -492,8 +492,8 @@ public final class MDictDictionary implements Dictionary {
 
     private static void skipKeyString(@NonNull ByteBuffer bb) {
         if (bb.remaining() < 2) return;
-        int len = bb.getShort() & 0xFFFF;
-        // UTF-16LE: len chars = len*2 bytes + 2 null bytes
+        int len = bb.getShort() & 0xFFFF; // len = number of characters (code units)
+        // UTF-16LE: each character is 2 bytes, plus 2-byte null terminator
         int bytesToSkip = len * 2 + 2;
         if (bb.remaining() >= bytesToSkip) {
             bb.position(bb.position() + bytesToSkip);
@@ -601,9 +601,12 @@ public final class MDictDictionary implements Dictionary {
 
     @NonNull
     private static UUID deterministicUuid(@NonNull String filePath) {
-        // Name-based UUID (version 5, DNS namespace) from file path
+        // Simplified deterministic UUID derived from the file path.
+        // Note: this is NOT a standards-compliant version 5 UUID (which would
+        // require SHA-1 over a namespace + name), but the version/variant bits
+        // are set to the RFC 4122 values for version 5 (0x5000) and variant 2
+        // (0x8000...) to produce a well-formed UUID string.
         byte[] bytes = filePath.getBytes(StandardCharsets.UTF_8);
-        // Simple implementation: use MD5-like mixing
         long most = 0, least = 0;
         for (int i = 0; i < bytes.length; i++) {
             if (i < 8) most  = (most  << 8) | (bytes[i] & 0xFF);
@@ -611,8 +614,8 @@ public final class MDictDictionary implements Dictionary {
         }
         most  ^= filePath.hashCode();
         least ^= filePath.hashCode() * 0x9e3779b97f4a7c15L;
-        // Set UUID version to 5
-        most = (most & 0xFFFFFFFFFFFF0FFFL) | 0x0000000000005000L;
+        // Apply RFC 4122 version (5) and variant (10xx) bits
+        most  = (most  & 0xFFFFFFFFFFFF0FFFL) | 0x0000000000005000L;
         least = (least & 0x3FFFFFFFFFFFFFFFL) | 0x8000000000000000L;
         return new UUID(most, least);
     }
