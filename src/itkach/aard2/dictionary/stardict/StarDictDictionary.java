@@ -103,6 +103,64 @@ public final class StarDictDictionary implements Dictionary {
     // -----------------------------------------------------------------------
 
     /**
+     * Pure-Java factory that builds a {@link StarDictDictionary} from already-
+     * opened streams.  This is the testable, Android-free entry point.
+     *
+     * @param ifoTags   key/value pairs from the {@code .ifo} file (already parsed)
+     * @param idxData   raw bytes of the {@code .idx} (or decompressed {@code .idx.gz})
+     * @param dictChannel open {@link FileChannel} for the uncompressed {@code .dict}
+     *                    file, OR {@code null} if {@code dictDzData} is provided
+     * @param dictDzData  fully decompressed content of a {@code .dict.dz} file,
+     *                    OR {@code null} if {@code dictChannel} is provided
+     * @param basePath    file-system path without extension (used to derive the id)
+     */
+    @NonNull
+    public static StarDictDictionary parse(@NonNull Map<String, String> ifoTags,
+                                            @NonNull byte[] idxData,
+                                            @Nullable FileChannel dictChannel,
+                                            @Nullable byte[] dictDzData,
+                                            @NonNull String basePath) throws IOException {
+        long wordCount = Long.parseLong(ifoTags.getOrDefault("wordcount", "0"));
+        Map<String, String> tags = buildTags(new HashMap<>(ifoTags), basePath);
+        String id = deterministicUuid(basePath + ".ifo").toString();
+
+        List<String> keys = new ArrayList<>((int) wordCount);
+        List<Integer> offList = new ArrayList<>((int) wordCount);
+        List<Integer> sizeList = new ArrayList<>((int) wordCount);
+        parseIdx(idxData, keys, offList, sizeList);
+
+        // Re-sort by QUATERNARY so that binary search with Slob.Strength works
+        // regardless of the byte-order sort in the .idx file.
+        if (keys.size() > 1) {
+            final Slob.KeyComparator sortCmp = Slob.Strength.QUATERNARY.comparator;
+            Integer[] sortedIdxs = new Integer[keys.size()];
+            for (int i = 0; i < keys.size(); i++) sortedIdxs[i] = i;
+            final String[] keyArr = keys.toArray(new String[0]);
+            Arrays.sort(sortedIdxs, (a, b) -> sortCmp.compare(
+                    new Slob.Keyed(keyArr[a]), new Slob.Keyed(keyArr[b])));
+            final int[] rawOff  = offList.stream().mapToInt(Integer::intValue).toArray();
+            final int[] rawSize = sizeList.stream().mapToInt(Integer::intValue).toArray();
+            keys.clear();
+            offList.clear();
+            sizeList.clear();
+            for (int j = 0; j < sortedIdxs.length; j++) {
+                keys.add(keyArr[sortedIdxs[j]]);
+                offList.add(rawOff[sortedIdxs[j]]);
+                sizeList.add(rawSize[sortedIdxs[j]]);
+            }
+        }
+
+        int[] offsets = offList.stream().mapToInt(Integer::intValue).toArray();
+        int[] sizes   = sizeList.stream().mapToInt(Integer::intValue).toArray();
+
+        if (dictDzData == null && dictChannel == null) {
+            throw new IOException("Neither dictChannel nor dictDzData provided for " + basePath);
+        }
+        return new StarDictDictionary(id, basePath, tags, wordCount,
+                keys, offsets, sizes, dictChannel, dictDzData);
+    }
+
+    /**
      * Opens a StarDict dictionary from its {@code .ifo} file URI.  The
      * companion {@code .idx} and {@code .dict} (or {@code .dict.dz}) files
      * must reside in the same directory with the same base name.
@@ -128,15 +186,10 @@ public final class StarDictDictionary implements Dictionary {
             }
         }
 
-        long wordCount = Long.parseLong(ifoTags.getOrDefault("wordcount", "0"));
         String basePath = ifoPath.endsWith(".ifo")
                 ? ifoPath.substring(0, ifoPath.length() - 4) : ifoPath;
 
-        Map<String, String> tags = buildTags(ifoTags, basePath);
-        String id = deterministicUuid(ifoPath).toString();
-
         // ── .idx (.idx.gz) ────────────────────────────────────────────────
-        String idxPath = basePath + ".idx";
         Uri idxUri = deriveUri(ifoUri, ".ifo", ".idx");
         byte[] idxData = null;
 
@@ -157,36 +210,6 @@ public final class StarDictDictionary implements Dictionary {
                 idxData = readAll(is);
             }
         }
-
-        List<String> keys = new ArrayList<>((int) wordCount);
-        List<Integer> offList = new ArrayList<>((int) wordCount);
-        List<Integer> sizeList = new ArrayList<>((int) wordCount);
-        parseIdx(idxData, keys, offList, sizeList);
-
-        // StarDict .idx files sort entries by byte-order (strcmp), which can
-        // differ from Unicode collation.  Re-sort by QUATERNARY so that
-        // findStartIndex's binary search is correct for all languages.
-        if (keys.size() > 1) {
-            final Slob.KeyComparator sortCmp = Slob.Strength.QUATERNARY.comparator;
-            Integer[] sortedIdxs = new Integer[keys.size()];
-            for (int i = 0; i < keys.size(); i++) sortedIdxs[i] = i;
-            final String[] keyArr = keys.toArray(new String[0]);
-            Arrays.sort(sortedIdxs, (a, b) -> sortCmp.compare(
-                    new Slob.Keyed(keyArr[a]), new Slob.Keyed(keyArr[b])));
-            final int[] rawOff  = offList.stream().mapToInt(Integer::intValue).toArray();
-            final int[] rawSize = sizeList.stream().mapToInt(Integer::intValue).toArray();
-            keys.clear();
-            offList.clear();
-            sizeList.clear();
-            for (int j = 0; j < sortedIdxs.length; j++) {
-                keys.add(keyArr[sortedIdxs[j]]);
-                offList.add(rawOff[sortedIdxs[j]]);
-                sizeList.add(rawSize[sortedIdxs[j]]);
-            }
-        }
-
-        int[] offsets = offList.stream().mapToInt(Integer::intValue).toArray();
-        int[] sizes   = sizeList.stream().mapToInt(Integer::intValue).toArray();
 
         // ── .dict or .dict.dz ─────────────────────────────────────────────
         FileChannel dictChannel = null;
@@ -218,12 +241,7 @@ public final class StarDictDictionary implements Dictionary {
             }
         }
 
-        if (dictDzData == null && dictChannel == null) {
-            throw new IOException("No .dict or .dict.dz file found for " + basePath);
-        }
-
-        return new StarDictDictionary(id, basePath, tags, wordCount,
-                keys, offsets, sizes, dictChannel, dictDzData);
+        return parse(ifoTags, idxData, dictChannel, dictDzData, basePath);
     }
 
     // -----------------------------------------------------------------------
