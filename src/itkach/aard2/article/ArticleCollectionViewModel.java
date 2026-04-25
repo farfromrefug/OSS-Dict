@@ -2,18 +2,14 @@ package itkach.aard2.article;
 
 import android.app.Application;
 import android.app.SearchManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.text.TextUtils;
 import android.util.Log;
-
-import android.content.Context;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
-
-import java.util.List;
-
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -25,11 +21,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
-import itkach.aard2.descriptor.BlobDescriptor;
 import itkach.aard2.R;
 import itkach.aard2.SlobHelper;
+import itkach.aard2.descriptor.BlobDescriptor;
+import itkach.aard2.dictionary.DictionaryEntry;
 import itkach.aard2.lookup.LookupResult;
-import itkach.aard2.prefs.AppPrefs;
 import itkach.aard2.utils.ThreadUtils;
 import itkach.aard2.utils.Utils;
 import itkach.slob.Slob;
@@ -59,23 +55,21 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
         intent.addCategory(Intent.CATEGORY_BROWSABLE);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         
-        // Get all apps that can handle this intent
         PackageManager pm = context.getPackageManager();
         List<ResolveInfo> resolveInfos = pm.queryIntentActivities(intent, 0);
         
         for (ResolveInfo resolveInfo : resolveInfos) {
             String packageName = resolveInfo.activityInfo.packageName;
-
-            // Skip your own app's package
             if (!packageName.equals(context.getPackageName())) {
                 intent.setPackage(packageName);
                 context.startActivity(intent);
                 break;
             }
         }
-
     }
+
     Uri articleUri = null;
+
     public void loadBlobList(@NonNull Intent intent) {
         ThreadUtils.postOnBackgroundThread(() -> {
             articleUri = intent.getData();
@@ -96,14 +90,11 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
                         result = createFromIntent(intent);
                     }
                 }
-                // Deliver result
                 if (result != null) {
                     int resultCount = result.size();
                     if (resultCount != 0) {
                         blobListLiveData.postValue(result);
                     } else if (currentPosition >= resultCount) {
-
-
                         failureMessageLiveData.postValue(application.getString(R.string.article_collection_selected_not_available));
                     } else {
                         failureMessageLiveData.postValue(application.getString(R.string.article_collection_nothing_found));
@@ -127,11 +118,12 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
         if (bd == null) {
             return null;
         }
-        Iterator<Slob.Blob> result = SlobHelper.getInstance().find(bd.key, bd.slobId);
+        Iterator<DictionaryEntry> result = SlobHelper.getInstance().find(bd.key, bd.slobId);
         LookupResult lookupResult = new LookupResult(20, 1);
         lookupResult.setResult(result);
         boolean hasFragment = !TextUtils.isEmpty(bd.fragment);
-        return new LookupResultWrapper(lookupResult, hasFragment ? new ToBlobWithFragment(bd.fragment) : item -> item);
+        return new LookupResultWrapper(lookupResult,
+                hasFragment ? new ToEntryWithFragment(bd.fragment) : item -> item);
     }
 
     @NonNull
@@ -163,7 +155,7 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
         if (lookupKey == null) {
             lookupKey = intent.getStringExtra("EXTRA_QUERY");
         }
-        String preferredSlobId = null;
+        String preferredDictId = null;
         if (lookupKey == null) {
             Uri uri = intent.getData();
             if (uri != null) {
@@ -172,7 +164,7 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
                 if (length > 0) {
                     lookupKey = segments.get(length - 1);
                 }
-                if (lookupKey.equals("Special:Search")){
+                if (lookupKey.equals("Special:Search")) {
                     lookupKey = uri.getQueryParameter("search");
                 }
                 String slobUri = Utils.wikipediaToSlobUri(uri);
@@ -180,8 +172,8 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
                 if (slobUri != null) {
                     Slob slob = SlobHelper.getInstance().findSlob(slobUri);
                     if (slob != null) {
-                        preferredSlobId = slob.getId().toString();
-                        Log.d(TAG, String.format("Found slob %s for slob URI %s", preferredSlobId, slobUri));
+                        preferredDictId = slob.getId().toString();
+                        Log.d(TAG, String.format("Found slob %s for slob URI %s", preferredDictId, slobUri));
                     }
                 }
             }
@@ -191,24 +183,24 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
             throw new RuntimeException(msg);
         }
         LookupResult lookupResult = new LookupResult(20, 1);
-        Iterator<Slob.Blob> result = stemLookup(lookupKey, preferredSlobId);
+        Iterator<DictionaryEntry> result = stemLookup(lookupKey, preferredDictId);
         lookupResult.setResult(result);
-        // Update the query for the main activity
         ((itkach.aard2.Application) getApplication()).lookupAsync(lookupKey);
         return new LookupResultWrapper(lookupResult, item -> item);
     }
 
     @NonNull
-    private Iterator<Slob.Blob> stemLookup(@NonNull String lookupKey, @Nullable String preferredSlobId) {
-        Slob.PeekableIterator<Slob.Blob> result;
+    private Iterator<DictionaryEntry> stemLookup(@NonNull String lookupKey,
+                                                   @Nullable String preferredDictId) {
+        SlobHelper.PeekableEntryIterator result;
         final int length = lookupKey.length();
         String currentLookupKey = lookupKey;
         int currentLength = currentLookupKey.length();
         do {
-            result = SlobHelper.getInstance().find(currentLookupKey, preferredSlobId, true);
+            result = SlobHelper.getInstance().find(currentLookupKey, preferredDictId, true);
             if (result.hasNext()) {
-                Slob.Blob b = result.peek();
-                if (b.key.length() - length > 3) {
+                DictionaryEntry entry = result.peek();
+                if (entry.key.length() - length > 3) {
                     // We don't like this result
                 } else {
                     break;
@@ -220,21 +212,19 @@ public class ArticleCollectionViewModel extends AndroidViewModel {
         return result;
     }
 
-    private static class ToBlobWithFragment implements LookupResultWrapper.ToBlob<Slob.Blob> {
+    private static class ToEntryWithFragment implements LookupResultWrapper.ToEntry<DictionaryEntry> {
         @NonNull
         private final String fragment;
 
-        ToBlobWithFragment(@NonNull String fragment) {
+        ToEntryWithFragment(@NonNull String fragment) {
             this.fragment = fragment;
         }
 
         @Override
         @Nullable
-        public Slob.Blob convert(@Nullable Slob.Blob item) {
-            if (item == null) {
-                return null;
-            }
-            return new Slob.Blob(item.owner, item.id, item.key, this.fragment);
+        public DictionaryEntry convert(@Nullable DictionaryEntry item) {
+            if (item == null) return null;
+            return new DictionaryEntry(item.owner, item.id, item.key, this.fragment);
         }
     }
 }

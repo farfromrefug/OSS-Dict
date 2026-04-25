@@ -7,7 +7,7 @@ import androidx.annotation.Nullable;
 
 import itkach.aard2.descriptor.BlobDescriptor;
 import itkach.aard2.BlobDescriptorList;
-import itkach.slob.Slob;
+import itkach.aard2.dictionary.DictionaryEntry;
 
 class BlobDescriptorListWrapper implements BlobListWrapper {
     private final BlobDescriptorList blobDescriptorList;
@@ -28,7 +28,7 @@ class BlobDescriptorListWrapper implements BlobListWrapper {
 
     @Override
     @Nullable
-    public Slob.Blob get(int index) {
+    public DictionaryEntry get(int index) {
         BlobDescriptor item = blobDescriptorList.get(index);
         return item != null ? blobDescriptorList.resolve(item) : null;
     }

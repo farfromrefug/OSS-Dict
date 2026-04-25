@@ -49,7 +49,8 @@ public class DictionaryListViewModel extends AndroidViewModel {
                 }
             }
             for (Uri uri : selection) {
-                getApplication().getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                getApplication().getContentResolver().takePersistableUriPermission(uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 SlobDescriptor sd = SlobDescriptor.fromUri(getApplication(), uri);
                 SlobDescriptorList dictionaries = SlobHelper.getInstance().dictionaries;
                 if (!dictionaries.hasId(sd.id)) {
@@ -66,40 +67,44 @@ public class DictionaryListViewModel extends AndroidViewModel {
     public void updateDictionary(@NonNull Uri newUri) {
         ThreadUtils.postOnBackgroundThread(() -> {
             if (dictionaryToBeReplaced != null) {
-                getApplication().getContentResolver().takePersistableUriPermission(newUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                getApplication().getContentResolver().takePersistableUriPermission(newUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 SlobHelper slobHelper = SlobHelper.getInstance();
                 SlobDescriptorList dictionaries = slobHelper.dictionaries;
                 SlobDescriptor newSd = SlobDescriptor.fromUri(getApplication(), newUri);
                 if (!dictionaries.hasId(dictionaryToBeReplaced.id)) {
                     // Dictionary to be replaced does not exist for some reason
                     if (!dictionaries.hasId(newSd.id)) {
-                        // The added dictionary is new, so add it before we're finished
                         dictionaries.add(newSd);
                     }
                     return;
                 }
                 // Replace dictionary
                 dictionaries.remove(dictionaryToBeReplaced);
-                // Only add the dictionary if it's new
                 if (!dictionaries.hasId(newSd.id)) {
                     dictionaries.add(newSd);
                 }
-                // Update history and bookmarks
+                // Update history and bookmarks – use getDictionaryUri for format-agnostic lookup
                 String oldId = dictionaryToBeReplaced.id;
                 String newId = newSd.id;
-                String newSlobUri = slobHelper.getSlobUri(newId);
+                String newDictUri = slobHelper.getDictionaryUri(newId);
+                if (newDictUri == null) {
+                    // Fallback for Slob
+                    newDictUri = slobHelper.getSlobUri(newId);
+                }
+                final String finalNewDictUri = newDictUri;
                 BlobDescriptorList history = slobHelper.history;
                 for (BlobDescriptor d : history.getList()) {
                     if (Objects.equals(d.slobId, oldId)) {
                         d.slobId = newId;
-                        d.slobUri = newSlobUri;
+                        d.slobUri = finalNewDictUri;
                     }
                 }
                 BlobDescriptorList bookmarks = slobHelper.bookmarks;
                 for (BlobDescriptor d : bookmarks.getList()) {
                     if (Objects.equals(d.slobId, oldId)) {
                         d.slobId = newId;
-                        d.slobUri = newSlobUri;
+                        d.slobUri = finalNewDictUri;
                     }
                 }
                 ThreadUtils.postOnMainThread(() -> {

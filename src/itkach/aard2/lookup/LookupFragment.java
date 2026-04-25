@@ -25,9 +25,9 @@ import itkach.aard2.MainActivity;
 import itkach.aard2.R;
 import itkach.aard2.SlobHelper;
 import itkach.aard2.article.ArticleCollectionActivity;
+import itkach.aard2.dictionary.DictionaryEntry;
 import itkach.aard2.prefs.AppPrefs;
 import itkach.aard2.utils.ClipboardUtils;
-import itkach.slob.Slob;
 
 public class LookupFragment extends BaseListFragment implements LookupListener, SearchView.OnQueryTextListener {
     private final static String TAG = LookupFragment.class.getSimpleName();
@@ -75,13 +75,13 @@ public class LookupFragment extends BaseListFragment implements LookupListener, 
                 ((MainActivity) activity).hideFab();
             } else {
                 ((MainActivity) activity).displayFab(R.drawable.ic_auto_awesome, R.string.action_open_random_article, v -> {
-                    Slob.Blob blob = SlobHelper.getInstance().findRandom();
-                    if (blob == null) {
+                    DictionaryEntry entry = SlobHelper.getInstance().findRandom();
+                    if (entry == null) {
                         Toast.makeText(activity, R.string.article_collection_nothing_found, Toast.LENGTH_SHORT).show();
                         return;
                     }
                     Intent intent = new Intent(activity, ArticleCollectionActivity.class);
-                    intent.setData(SlobHelper.getInstance().getHttpUri(blob));
+                    intent.setData(SlobHelper.getInstance().getHttpUri(entry));
                     startActivity(intent);
                 });
             }

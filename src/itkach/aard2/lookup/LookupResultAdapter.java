@@ -19,12 +19,12 @@ import java.util.List;
 
 import itkach.aard2.R;
 import itkach.aard2.article.ArticleCollectionActivity;
-import itkach.aard2.slob.SlobTags;
+import itkach.aard2.dictionary.Dictionary;
+import itkach.aard2.dictionary.DictionaryEntry;
 import itkach.aard2.utils.ThreadUtils;
-import itkach.slob.Slob;
 
 public class LookupResultAdapter extends RecyclerView.Adapter<LookupResultAdapter.ViewHolder> {
-    private List<Slob.Blob> list;
+    private List<DictionaryEntry> list;
 
     private final LookupResult lookupResult;
     private final DataSetObserver observer = new DataSetObserver() {
@@ -48,16 +48,16 @@ public class LookupResultAdapter extends RecyclerView.Adapter<LookupResultAdapte
     }
 
     @Nullable
-    public Slob.Blob getItem(int position) {
-        Slob.Blob result = list.get(position);
+    public DictionaryEntry getItem(int position) {
+        DictionaryEntry result = list.get(position);
         lookupResult.loadMoreItems(position);
         return result;
     }
 
     @Override
     public long getItemId(int position) {
-        Slob.Blob blob = getItem(position);
-        return blob != null ? blob.hashCode() : RecyclerView.NO_ID;
+        DictionaryEntry entry = getItem(position);
+        return entry != null ? entry.hashCode() : RecyclerView.NO_ID;
     }
 
     @NonNull
@@ -69,17 +69,17 @@ public class LookupResultAdapter extends RecyclerView.Adapter<LookupResultAdapte
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Slob.Blob item = getItem(position);
+        DictionaryEntry item = getItem(position);
         if (item == null) {
             holder.itemView.setVisibility(View.GONE);
             return;
         }
-        Slob slob = item.owner;
+        Dictionary dict = item.owner;
         Context context = holder.itemView.getContext();
 
         holder.itemView.setVisibility(View.VISIBLE);
         holder.titleView.setText(item.key);
-        holder.sourceView.setText(slob == null ? "???" : slob.getTags().get(SlobTags.TAG_LABEL));
+        holder.sourceView.setText(dict == null ? "???" : dict.getLabel());
         holder.cardView.setOnClickListener(v -> {
             Intent intent = new Intent(context, ArticleCollectionActivity.class);
             intent.putExtra("position", position);

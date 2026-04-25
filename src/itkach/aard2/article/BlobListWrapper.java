@@ -5,7 +5,7 @@ import android.database.DataSetObserver;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import itkach.slob.Slob;
+import itkach.aard2.dictionary.DictionaryEntry;
 
 interface BlobListWrapper {
     void registerDataSetObserver(@NonNull DataSetObserver observer);
@@ -13,7 +13,7 @@ interface BlobListWrapper {
     void unregisterDataSetObserver(@NonNull DataSetObserver observer);
 
     @Nullable
-    Slob.Blob get(int index);
+    DictionaryEntry get(int index);
 
     @Nullable
     CharSequence getLabel(int index);

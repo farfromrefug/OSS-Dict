@@ -31,18 +31,15 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 import itkach.aard2.SlobHelper;
+import itkach.aard2.dictionary.Dictionary;
+import itkach.aard2.dictionary.DictionaryContent;
+import itkach.aard2.dictionary.DictionaryEntry;
+import itkach.aard2.dictionary.SlobDictionary;
 import itkach.slob.Slob;
 
-// With this server, we only serve the resources with authentication
-// Format: host:port/auth/slobId/key?blob=<id>#fragment
-// Format: host:port/auth/uri/key#fragment
+// With this server, we serve resources with authentication.
+// Format: host:port/auth/dictId/key?blob=<id>#fragment
 // Returns: Content with designated types and caching info.
-//
-// Caching:
-// For Slob ID, it is `Cache-Control: max-age=31556926`
-// For URI, it is `Cache-Control: max-age=600`
-//
-// For URI, Slob ID is returned as ETag to reuse previous results.
 public class SlobServer extends Thread {
     public static final String PAGE_NOT_FOUND = "404";
     public static final String OKAY = "200";
@@ -92,7 +89,6 @@ public class SlobServer extends Thread {
 
     public SlobServer(@NonNull String ip, int port) throws IOException {
         serverSocket = new ServerSocket(port, 100, InetAddress.getByName(ip));
-//        serverSocket.setSoTimeout(5000);
         authKey = generateAuthKey();
         setDaemon(true);
     }
@@ -101,14 +97,12 @@ public class SlobServer extends Thread {
     public void run() {
         while (!isInterrupted()) {
             try {
-                // Wait for new connection
                 Socket newSocket = serverSocket.accept();
                 Thread newClient = new EchoThread(newSocket);
                 newClient.start();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            // Loop continues as long as the server runs
         }
         try {
             serverSocket.close();
@@ -142,36 +136,28 @@ public class SlobServer extends Thread {
 
                 while ((size = in.read(data)) != -1) {
                     String recData = new String(data, 0, size);
-                    // System.out.println("Received Data: \n" + recData);
                     String[] headers = recData.split("\\r?\\n");
                     String[] requestLine = headers[0].split(" ");
                     if (requestLine.length != 3) {
-                        // Invalid request line
                         continue;
                     }
                     Request request = new Request(requestLine[0], requestLine[1], requestLine[2]);
 
-                    // Read header until a blank line
                     for (int i = 0; i < headers.length; ++i) {
                         String s = headers[i];
                         if (s.isEmpty()) {
-                            // End of headers
                             StringBuilder sb = new StringBuilder();
                             for (int j = i; j < headers.length; ++j) {
-                                sb.append(headers[i]);
+                                sb.append(headers[j]);
                                 if (j != (headers.length - 1)) {
                                     sb.append("\r\n");
                                 }
-                            }
-                            if (size == BUFFER_SIZE) {
-                                // TODO: 9/4/23 There may be more data
                             }
                             request.body = sb.toString();
                             break;
                         }
                         int colon = s.indexOf(':');
                         if (colon == -1) {
-                            // Invalid header
                             continue;
                         }
                         String name = s.substring(0, colon).trim().toLowerCase(Locale.ROOT);
@@ -184,101 +170,164 @@ public class SlobServer extends Thread {
             } catch (Exception er) {
                 er.printStackTrace();
             }
-
         }
-
     }
 
     public void processRequest(@NonNull DataOutputStream out, @NonNull Request request) {
         Uri uri = Uri.parse("http://localhost" + request.uri);
         List<String> pathSegments = uri.getPathSegments();
 
-        // Index - Meaning
-        // 0     - auth (fixed value: slob)
-        // 1     - slob ID or URI
-        // 2-n   - key
+        // Path segments:
+        //   [0] auth token
+        //   [1] dictionary ID (or URI for link-following)
+        //   [2..n] key
         if (pathSegments.size() < 3) {
             respondWithNotFound(out);
             return;
         }
         String auth = pathSegments.get(0);
         if (!authKey.equals(auth)) {
-            // Invalid auth
             respondWithBadRequest(out);
             return;
         }
         SlobHelper slobHelper = SlobHelper.getInstance();
-        String slobIdOrUri = pathSegments.get(1);
+        String dictIdOrUri = pathSegments.get(1);
         String ifNoneMatch = request.headers.get("if-none-match");
         StringBuilder key = new StringBuilder();
         for (int i = 2; i < pathSegments.size(); i++) {
-            if (key.length() > 0) {
-                key.append("/");
-            }
+            if (key.length() > 0) key.append("/");
             key.append(pathSegments.get(i));
         }
-        // Slob ID or URI check
-        Slob slob = slobHelper.getSlob(slobIdOrUri);
-        if (slob != null) {
-            // Slob ID
-            @Nullable
+
+        // ── Look up by dictionary ID ────────────────────────────────────────
+        Dictionary dict = slobHelper.getDictionary(dictIdOrUri);
+        if (dict != null) {
             String blobId = uri.getQueryParameter("blob");
             if (blobId != null) {
-                try {
-                    Slob.Content content = slob.getContent(blobId);
-                    respondWithBlobContent(out, content, "max-age=31556926", null);
+                DictionaryContent content = dict.getContent(blobId);
+                if (content != null) {
+                    respondWithDictionaryContent(out, content, "max-age=31556926", null);
                     return;
-                } catch (AssertionError e) {
-                    // AssertionError occurs if the blobId is invalid
                 }
+                // blobId present but not found – fall through to key lookup
             }
-            if (getEtag(slob.getId()).equals(ifNoneMatch)) {
+            if (getEtag(dict.getId()).equals(ifNoneMatch)) {
                 respondWithNotModified(out);
                 return;
             }
-            Slob.Blob blob = getBlobByUri(slobHelper, slob, key.toString());
-            if (blob == null) {
+            DictionaryEntry entry = getEntryByKey(slobHelper, dict, key.toString());
+            if (entry == null) {
                 respondWithNotFound(out);
                 return;
             }
-            respondWithBlobContent(out, blob.getContent(), "max-age=31556926", null);
+            DictionaryContent content = entry.getContent();
+            if (content == null) {
+                respondWithNotFound(out);
+                return;
+            }
+            respondWithDictionaryContent(out, content, "max-age=31556926", null);
             return;
         }
-        // Might be URI
-        slob = slobHelper.findSlob(slobIdOrUri);
-        if (slob == null) {
+
+        // ── Fall back to URI-based lookup (link-following) ──────────────────
+        dict = slobHelper.findDictionary(dictIdOrUri);
+        if (dict == null) {
             respondWithNotFound(out);
             return;
         }
-        if (getEtag(slob.getId()).equals(ifNoneMatch)) {
+        if (getEtag(dict.getId()).equals(ifNoneMatch)) {
             respondWithNotModified(out);
             return;
         }
-        Slob.Blob blob = getBlobByUri(slobHelper, slob, key.toString());
-        if (blob == null) {
+        DictionaryEntry entry = getEntryByKey(slobHelper, dict, key.toString());
+        if (entry == null) {
             respondWithNotFound(out);
             return;
         }
-        respondWithBlobContent(out, blob.getContent(), "max-age=600", getEtag(slob.getId()));
+        DictionaryContent content = entry.getContent();
+        if (content == null) {
+            respondWithNotFound(out);
+            return;
+        }
+        respondWithDictionaryContent(out, content, "max-age=600", getEtag(dict.getId()));
     }
 
     @NonNull
-    public String getEtag(UUID slobId) {
-        return String.format(Locale.ROOT, "\"%s\"", slobId);
+    public String getEtag(@NonNull String dictId) {
+        return String.format(Locale.ROOT, "\"%s\"", dictId);
     }
 
-    @Nullable
-    public Slob.Blob getBlobByUri(@NonNull SlobHelper slobHelper, @NonNull Slob slob, @NonNull String key) {
-        List<Slob> candidates = slobHelper.findSlobsByUri(slob.getURI());
+    /**
+     * @deprecated Use {@link #getEtag(String)} instead.
+     */
+    @Deprecated
+    @NonNull
+    public String getEtag(UUID slobId) {
+        return getEtag(slobId.toString());
+    }
 
-        Collections.sort(candidates, (o1, o2) -> {
-            String createTime1 = o1.getTags().get("created.at");
-            String createTime2 = o2.getTags().get("created.at");
-            if (createTime2 == null) createTime2 = "";
-            if (createTime1 == null) createTime1 = "";
-            return createTime2.compareTo(createTime1);
+    /**
+     * Searches for a key across all dictionaries that share the same URI as
+     * {@code dict} (to handle multi-volume / updated dictionaries), returning
+     * the best match.
+     */
+    @Nullable
+    public DictionaryEntry getEntryByKey(@NonNull SlobHelper slobHelper,
+                                          @NonNull Dictionary dict,
+                                          @NonNull String key) {
+        List<Dictionary> candidates = slobHelper.findDictionariesByUri(dict.getUri());
+        if (candidates.isEmpty()) candidates = Collections.singletonList(dict);
+
+        // Sort by creation time (newest first) so we prefer recent volumes
+        candidates.sort((d1, d2) -> {
+            String t1 = d1.getTags().getOrDefault("created.at", "");
+            String t2 = d2.getTags().getOrDefault("created.at", "");
+            return t2.compareTo(t1);
         });
 
+        // For Slob dictionaries, use the merge-aware Slob.find()
+        boolean allSlob = true;
+        for (Dictionary d : candidates) {
+            if (!(d instanceof SlobDictionary)) { allSlob = false; break; }
+        }
+        if (allSlob && !candidates.isEmpty()) {
+            Slob[] slobs = new Slob[candidates.size()];
+            for (int i = 0; i < candidates.size(); i++) {
+                slobs[i] = ((SlobDictionary) candidates.get(i)).getSlob();
+            }
+            Slob preferred = (dict instanceof SlobDictionary)
+                    ? ((SlobDictionary) dict).getSlob() : null;
+            Iterator<Slob.Blob> result = Slob.find(key, slobs, preferred, Slob.Strength.SECONDARY);
+            if (result.hasNext()) {
+                Slob.Blob blob = result.next();
+                SlobDictionary sd = (SlobDictionary) dict;
+                return sd.fromBlob(blob);
+            }
+            return null;
+        }
+
+        // Generic path: search each candidate
+        for (Dictionary d : candidates) {
+            Iterator<DictionaryEntry> it = d.find(key, Slob.Strength.SECONDARY);
+            if (it.hasNext()) return it.next();
+        }
+        return null;
+    }
+
+    /**
+     * @deprecated Use {@link #getEntryByKey(SlobHelper, Dictionary, String)} instead.
+     */
+    @Deprecated
+    @Nullable
+    public Slob.Blob getBlobByUri(@NonNull SlobHelper slobHelper,
+                                   @NonNull Slob slob,
+                                   @NonNull String key) {
+        List<Slob> candidates = slobHelper.findSlobsByUri(slob.getURI());
+        Collections.sort(candidates, (o1, o2) -> {
+            String t1 = o1.getTags().getOrDefault("created.at", "");
+            String t2 = o2.getTags().getOrDefault("created.at", "");
+            return t2.compareTo(t1);
+        });
         Iterator<Slob.Blob> result = Slob.find(key, candidates.toArray(new Slob[0]),
                 slob, Slob.Strength.SECONDARY);
         return result.hasNext() ? result.next() : null;
@@ -291,8 +340,10 @@ public class SlobServer extends Thread {
         writer.flush();
     }
 
-    public void respondWithBlobContent(@NonNull DataOutputStream out, @NonNull Slob.Content content,
-                                       @NonNull String cacheControl, @Nullable String eTag) {
+    public void respondWithDictionaryContent(@NonNull DataOutputStream out,
+                                              @NonNull DictionaryContent content,
+                                              @NonNull String cacheControl,
+                                              @Nullable String eTag) {
         PrintWriter writer = getWriter(out);
         printHeader(writer, OKAY, keepAlive, content.type, content.data.remaining(), cacheControl);
         if (eTag != null) {
@@ -305,6 +356,17 @@ public class SlobServer extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * @deprecated Use {@link #respondWithDictionaryContent} instead.
+     */
+    @Deprecated
+    public void respondWithBlobContent(@NonNull DataOutputStream out, @NonNull Slob.Content content,
+                                       @NonNull String cacheControl, @Nullable String eTag) {
+        respondWithDictionaryContent(out,
+                new DictionaryContent(content.type, content.data),
+                cacheControl, eTag);
     }
 
     public void respondWithNotFound(@NonNull DataOutputStream out) {
@@ -365,7 +427,6 @@ public class SlobServer extends Thread {
     public static void startServer(String ip, int port) throws IOException {
         synchronized (sLock) {
             if (sSlobServer != null && sSlobServer.isAlive()) {
-                // Server active
                 return;
             }
             sSlobServer = new SlobServer(ip, port);
@@ -395,40 +456,27 @@ public class SlobServer extends Thread {
 
     /**
      * Test if the app has permission to use ServerSocket.
-     * This is used to detect if network access has been disabled in app settings.
-     * 
-     * @param ip The IP address to test (typically "127.0.0.1" for localhost)
-     * @param port The port to test (typically 0 for any available port)
-     * @return true if ServerSocket can be created, false if network access is blocked
      */
     public static boolean canUseServerSocket(@NonNull String ip, int port) {
         Log.d("SlobServer", "canUseServerSocket " + ip + " " + port);
         ServerSocket testSocket = null;
         try {
-            // Try to create a ServerSocket on localhost
-            // Using backlog of 0 (system default) since this is just a capability test
             testSocket = new ServerSocket(port, 0, InetAddress.getByName(ip));
-            // If we got here, we can create ServerSocket
             return true;
         } catch (SecurityException e) {
             e.printStackTrace();
-            // Network access is blocked by security policy (app settings)
             return false;
         } catch (SocketException e) {
             e.printStackTrace();
-            // Network access is blocked by security policy (app settings)
             return !e.getMessage().contains(" ECONNREFUSED");
         } catch (IOException e) {
             e.printStackTrace();
-            // Other IO errors (port in use, etc.) - but we CAN create sockets
-            // This means network access is allowed, just this particular operation failed
             return true;
         } finally {
             if (testSocket != null) {
                 try {
                     testSocket.close();
                 } catch (IOException ignored) {
-                    // Ignore errors when closing test socket
                 }
             }
         }
@@ -455,7 +503,6 @@ public class SlobServer extends Thread {
             result[resultIndex] = (DIGITS[(b >> 4) & 0x0f]);
             result[resultIndex + 1] = (DIGITS[b & 0x0f]);
         }
-
         return result;
     }
 

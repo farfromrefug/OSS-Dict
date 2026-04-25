@@ -1,8 +1,10 @@
 package itkach.aard2.descriptor;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
+import android.provider.OpenableColumns;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -13,12 +15,27 @@ import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import itkach.aard2.dictionary.Dictionary;
+import itkach.aard2.dictionary.SlobDictionary;
+import itkach.aard2.dictionary.mdict.MDictDictionary;
+import itkach.aard2.dictionary.stardict.StarDictDictionary;
 import itkach.aard2.slob.SlobTags;
 import itkach.slob.Slob;
 
 
 public class SlobDescriptor extends BaseDescriptor {
     private final static String TAG = SlobDescriptor.class.getSimpleName();
+
+    /**
+     * Dictionary format identifier. One of: {@code "slob"}, {@code "mdict"},
+     * {@code "stardict"}.  Defaults to {@code "slob"} so that existing
+     * persisted descriptors continue to work without migration.
+     */
+    public String format = FORMAT_SLOB;
+
+    public static final String FORMAT_SLOB     = "slob";
+    public static final String FORMAT_MDICT    = "mdict";
+    public static final String FORMAT_STARDICT = "stardict";
 
     public String path;
     public Map<String, String> tags = new HashMap<>();
@@ -33,7 +50,11 @@ public class SlobDescriptor extends BaseDescriptor {
     private SlobDescriptor() {
     }
 
-    private void update(@NonNull Slob s) {
+    // -----------------------------------------------------------------------
+    // Slob-specific loading (kept for backward compatibility)
+    // -----------------------------------------------------------------------
+
+    private void updateFromSlob(@NonNull Slob s) {
         this.id = s.getId().toString();
         this.path = s.fileURI;
         this.tags = s.getTags();
@@ -41,6 +62,8 @@ public class SlobDescriptor extends BaseDescriptor {
         this.error = null;
     }
 
+    /** @deprecated Use {@link #loadDictionary(Context)} instead. */
+    @Deprecated
     @Nullable
     public Slob load(@NonNull Context context) {
         Slob slob = null;
@@ -49,7 +72,7 @@ public class SlobDescriptor extends BaseDescriptor {
             fileDescriptor = context.getContentResolver().openFileDescriptor(uri, "r");
             FileInputStream fileInputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
             slob = new Slob(fileInputStream.getChannel(), path);
-            update(slob);
+            updateFromSlob(slob);
         } catch (Exception e) {
             Log.e(TAG, "Error while opening " + this.path, e);
             error = e.getMessage();
@@ -62,6 +85,57 @@ public class SlobDescriptor extends BaseDescriptor {
         return slob;
     }
 
+    // -----------------------------------------------------------------------
+    // Format-agnostic loading
+    // -----------------------------------------------------------------------
+
+    /**
+     * Opens the dictionary file and returns an appropriate {@link Dictionary}
+     * implementation based on {@link #format}.
+     *
+     * <p>On success the descriptor's {@link #id}, {@link #tags}, and
+     * {@link #blobCount} are updated from the loaded dictionary.  On failure
+     * {@link #error} is set and {@link #active} is set to {@code false}.</p>
+     */
+    @Nullable
+    public Dictionary loadDictionary(@NonNull Context context) {
+        try {
+            Uri uri = Uri.parse(path);
+            Dictionary dict;
+            switch (format) {
+                case FORMAT_MDICT:
+                    dict = MDictDictionary.fromUri(context, uri, path);
+                    break;
+                case FORMAT_STARDICT:
+                    dict = StarDictDictionary.fromIfoUri(context, uri, path);
+                    break;
+                case FORMAT_SLOB:
+                default:
+                    fileDescriptor = context.getContentResolver().openFileDescriptor(uri, "r");
+                    FileInputStream fis = new FileInputStream(fileDescriptor.getFileDescriptor());
+                    Slob slob = new Slob(fis.getChannel(), path);
+                    updateFromSlob(slob);
+                    return new SlobDictionary(slob);
+            }
+            // Update descriptor metadata from the loaded dictionary
+            this.id = dict.getId();
+            this.tags = new HashMap<>(dict.getTags());
+            this.blobCount = dict.getBlobCount();
+            this.error = null;
+            return dict;
+        } catch (Exception e) {
+            Log.e(TAG, "Error opening " + this.path + " (format=" + format + ")", e);
+            error = e.getMessage();
+            expandDetail = true;
+            active = false;
+            return null;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Display helpers
+    // -----------------------------------------------------------------------
+
     @NonNull
     public String getLabel() {
         String label = tags.get(SlobTags.TAG_LABEL);
@@ -71,11 +145,55 @@ public class SlobDescriptor extends BaseDescriptor {
         return label;
     }
 
+    // -----------------------------------------------------------------------
+    // Factory methods
+    // -----------------------------------------------------------------------
+
+    /**
+     * Creates a descriptor from a URI, auto-detecting the dictionary format
+     * from the file extension.
+     */
     @NonNull
     public static SlobDescriptor fromUri(@NonNull Context context, @NonNull Uri uri) {
         SlobDescriptor s = new SlobDescriptor();
         s.path = uri.toString();
-        s.load(context);
+        s.format = detectFormat(context, uri);
+        s.loadDictionary(context);
         return s;
+    }
+
+    /**
+     * Detects the dictionary format for a content URI by querying the display
+     * name (actual filename) from the content resolver.  Falls back to the URI
+     * string itself when the display name cannot be obtained.
+     */
+    @NonNull
+    public static String detectFormat(@NonNull Context context, @NonNull Uri uri) {
+        String displayName = null;
+        try (Cursor cursor = context.getContentResolver().query(
+                uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                displayName = cursor.getString(0);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Could not query display name for " + uri, e);
+        }
+        // Fall back to the URI string itself (e.g. file:// URIs that carry the name)
+        if (displayName == null) {
+            displayName = uri.toString();
+        }
+        return detectFormat(displayName);
+    }
+
+    /**
+     * Detects the dictionary format from the file path / URI string based on
+     * the file extension.
+     */
+    @NonNull
+    public static String detectFormat(@NonNull String path) {
+        String lower = path.toLowerCase();
+        if (lower.endsWith(".mdx")) return FORMAT_MDICT;
+        if (lower.endsWith(".ifo")) return FORMAT_STARDICT;
+        return FORMAT_SLOB;
     }
 }

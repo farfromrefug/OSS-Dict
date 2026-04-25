@@ -49,6 +49,17 @@ android {
             res.srcDirs = ['res']
             assets.srcDirs = ['assets']
         }
+        test {
+            java.srcDirs = ['src/test/java']
+            resources.srcDirs = ['src/test/resources']
+        }
+    }
+
+    testOptions {
+        unitTests {
+            returnDefaultValues true
+            includeAndroidResources false
+        }
     }
 
     if (System.getenv("KEYSTORE") != null) {
@@ -108,4 +119,7 @@ dependencies {
     api 'com.fasterxml.jackson.core:jackson-databind:2.20.1'
     api 'com.fasterxml.jackson.core:jackson-core:2.20.1'
     api 'com.fasterxml.jackson.core:jackson-annotations:2.20'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.testng:testng:7.5'
 }
