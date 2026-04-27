@@ -286,6 +286,10 @@ platform :android do
 
     puts "upload_to_play_store dir: #{Dir.getwd}"
     puts "metadata_dir: #{Pathname.new(File.join(metadata_path_realpath, "android")).realpath.to_s}"
+    puts Actions.lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH]
+    puts Actions.lane_context[SharedValues::GRADLE_ALL_AAB_OUTPUT_PATHS]
+    puts Actions.lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
+    puts Actions.lane_context[SharedValues::GRADLE_ALL_APK_OUTPUT_PATHS]
     upload_to_play_store(
       track: track,
       metadata_path:File.join(metadata_path_realpath, "android"),
