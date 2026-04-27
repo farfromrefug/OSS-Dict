@@ -36,6 +36,7 @@ public class SlobDescriptor extends BaseDescriptor {
     public static final String FORMAT_SLOB     = "slob";
     public static final String FORMAT_MDICT    = "mdict";
     public static final String FORMAT_STARDICT = "stardict";
+    public static final String FORMAT_STARDICT_ARCHIVE = "stardict-archive";
 
     public String path;
     public Map<String, String> tags = new HashMap<>();
@@ -108,6 +109,9 @@ public class SlobDescriptor extends BaseDescriptor {
                     break;
                 case FORMAT_STARDICT:
                     dict = StarDictDictionary.fromIfoUri(context, uri, path);
+                    break;
+                case FORMAT_STARDICT_ARCHIVE:
+                    dict = StarDictDictionary.fromArchiveUri(context, uri, path);
                     break;
                 case FORMAT_SLOB:
                 default:
@@ -194,6 +198,13 @@ public class SlobDescriptor extends BaseDescriptor {
         String lower = path.toLowerCase();
         if (lower.endsWith(".mdx")) return FORMAT_MDICT;
         if (lower.endsWith(".ifo")) return FORMAT_STARDICT;
+        if (lower.endsWith(".zip") && path.toLowerCase().contains("stardict")) {
+            return FORMAT_STARDICT_ARCHIVE;
+        }
+        if (lower.endsWith(".zip")) {
+            // Could be StarDict archive - we'll try to detect when loading
+            return FORMAT_STARDICT_ARCHIVE;
+        }
         return FORMAT_SLOB;
     }
 }
