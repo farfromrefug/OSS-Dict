@@ -37,7 +37,13 @@ com.akylas.aard2
 
 ## Dictionaries
 
-   - [Dictionaries](https://github.com/itkach/slob/wiki/Dictionaries)
+You can find 
+
+OSS-Dict supports different dictionary formats:
+
+* slob: slob-files. [Read here](https://github.com/itkach/slob) about slob. You can get dictionaries from https://github.com/itkach/slob/wiki/Dictionaries
+* MDict: you get dictionaries from https://forum.freemdict.com/t/topic/23143
+* StarDict/GoldenDict: you can get dictionaries from http://download.huzheng.org/
 
 
 ## Features
