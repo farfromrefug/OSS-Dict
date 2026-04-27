@@ -506,14 +506,15 @@ public final class SlobHelper {
         };
 
         // Chain non-Slob dictionaries
+        // Use SECONDARY strength for case-insensitive search
         List<Iterator<DictionaryEntry>> allIters = new ArrayList<>();
         allIters.add(slobEntries);
         for (Dictionary d : nonSlobDicts) {
             // Preferred dictionary goes first among non-Slob dicts
             if (d.getId().equals(preferredDictId)) {
-                allIters.add(0, d.find(key, Slob.Strength.QUATERNARY));
+                allIters.add(0, d.find(key, Slob.Strength.SECONDARY));
             } else {
-                allIters.add(d.find(key, Slob.Strength.QUATERNARY));
+                allIters.add(d.find(key, Slob.Strength.SECONDARY));
             }
         }
 
