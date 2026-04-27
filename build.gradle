@@ -121,5 +121,5 @@ dependencies {
     api 'com.fasterxml.jackson.core:jackson-annotations:2.20'
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.testng:testng:7.5'
+    testImplementation 'org.testng:testng:7.10.2'
 }
