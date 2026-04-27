@@ -45,7 +45,13 @@ public abstract class BaseListFragment extends Fragment {
         emptyText.setMovementMethod(LinkMovementMethod.getInstance());
         emptyText.setText(getEmptyText());
         ImageView emptyIcon = emptyView.findViewById(R.id.empty_icon);
-        emptyIcon.setImageResource(getEmptyIcon());
+        int icon = getEmptyIcon();
+        if (icon != -1) {
+            emptyIcon.setImageResource(getEmptyIcon());
+            emptyIcon.setVisibility(View.VISIBLE);
+        } else {
+            emptyIcon.setVisibility(View.GONE);
+        }
         return view;
     }
 

@@ -512,9 +512,9 @@ public final class SlobHelper {
         for (Dictionary d : nonSlobDicts) {
             // Preferred dictionary goes first among non-Slob dicts
             if (d.getId().equals(preferredDictId)) {
-                allIters.add(0, d.find(key, Slob.Strength.SECONDARY));
+                allIters.add(0, d.find(key, Slob.Strength.SECONDARY_PREFIX));
             } else {
-                allIters.add(d.find(key, Slob.Strength.SECONDARY));
+                allIters.add(d.find(key, Slob.Strength.SECONDARY_PREFIX));
             }
         }
 

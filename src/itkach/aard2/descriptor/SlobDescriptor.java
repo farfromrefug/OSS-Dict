@@ -198,9 +198,6 @@ public class SlobDescriptor extends BaseDescriptor {
         String lower = path.toLowerCase();
         if (lower.endsWith(".mdx")) return FORMAT_MDICT;
         if (lower.endsWith(".ifo")) return FORMAT_STARDICT;
-        if (lower.endsWith(".zip") && path.toLowerCase().contains("stardict")) {
-            return FORMAT_STARDICT_ARCHIVE;
-        }
         if (lower.endsWith(".zip")) {
             // Could be StarDict archive - we'll try to detect when loading
             return FORMAT_STARDICT_ARCHIVE;

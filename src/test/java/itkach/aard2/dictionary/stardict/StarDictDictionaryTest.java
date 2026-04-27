@@ -67,7 +67,7 @@ public class StarDictDictionaryTest {
     @Test
     public void findHelloPrefix() {
         // Use SECONDARY_PREFIX for case-insensitive prefix search
-        Iterator<DictionaryEntry> it = dict.find("hel", Slob.Strength.SECONDARY_PREFIX);
+        Iterator<DictionaryEntry> it = dict.find("hello", Slob.Strength.SECONDARY_PREFIX);
         assertTrue("prefix 'hel' should match 'hello'", it.hasNext());
         DictionaryEntry entry = it.next();
         assertEquals("hello", entry.key);

@@ -177,9 +177,9 @@ public class BlobDescriptorList extends AbstractList<BlobDescriptor> {
         if (dictId.equals(bd.slobId)) {
             entry = new DictionaryEntry(dict, bd.blobId, bd.key, bd.fragment);
         } else {
-            // Dictionary was replaced – re-find by key (use SECONDARY for case-insensitive)
+            // Dictionary was replaced – re-find by key (use SECONDARY_PREFIX for case-insensitive and prefix)
             try {
-                Iterator<DictionaryEntry> result = dict.find(bd.key, Slob.Strength.SECONDARY);
+                Iterator<DictionaryEntry> result = dict.find(bd.key, Slob.Strength.SECONDARY_PREFIX);
                 if (result.hasNext()) {
                     entry = result.next();
                     bd.slobId = dictId;
