@@ -74,7 +74,8 @@ public class MDictDictionaryTest {
 
     @Test
     public void findHelloPrefix() {
-        Iterator<DictionaryEntry> it = dict.find("hel", Slob.Strength.QUATERNARY_PREFIX);
+        // Use SECONDARY_PREFIX for case-insensitive prefix search
+        Iterator<DictionaryEntry> it = dict.find("hel", Slob.Strength.SECONDARY_PREFIX);
         assertTrue("prefix 'hel' should match 'hello'", it.hasNext());
     }
 
