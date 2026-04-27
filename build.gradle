@@ -116,10 +116,11 @@ dependencies {
     }
     implementation "androidx.webkit:webkit:1.15.0"
 
-    api 'com.fasterxml.jackson.core:jackson-databind:2.20.1'
-    api 'com.fasterxml.jackson.core:jackson-core:2.20.1'
-    api 'com.fasterxml.jackson.core:jackson-annotations:2.20'
+    api 'com.fasterxml.jackson.core:jackson-databind:2.21.2'
+    api 'com.fasterxml.jackson.core:jackson-core:2.21.2'
+    api 'com.fasterxml.jackson.core:jackson-annotations:2.21'
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.testng:testng:7.10.2'
+    implementation 'junit:junit:4.13.2'
+    testImplementation 'org.testng:testng:7.12.0'
 }
