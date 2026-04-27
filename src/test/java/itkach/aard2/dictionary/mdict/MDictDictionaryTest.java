@@ -217,7 +217,7 @@ public class MDictDictionaryTest {
             return delegate.read(dst);
         }
 
-        @Override public boolean isOpen() { return delegate.isOpen(); }
+//        @Override public boolean isOpen() { return delegate.isOpen(); }
         @Override public void implCloseChannel() { /* no-op */ }
 
         // ── Unused FileChannel abstract methods ──────────────────────────────
