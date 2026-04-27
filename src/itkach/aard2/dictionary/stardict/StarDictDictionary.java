@@ -6,6 +6,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.documentfile.provider.DocumentFile;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -190,51 +191,52 @@ public final class StarDictDictionary implements Dictionary {
                 ? ifoPath.substring(0, ifoPath.length() - 4) : ifoPath;
 
         // ── .idx (.idx.gz) ────────────────────────────────────────────────
-        Uri idxUri = deriveUri(ifoUri, ".ifo", ".idx");
+        // Try .idx.gz first (gzip-compressed index), then fall back to plain .idx
+        Uri idxUri = findCompanionFile(context, ifoUri, ifoPath, new String[]{".idx.gz", ".idx"});
         byte[] idxData = null;
 
-        // Try .idx.gz first (gzip-compressed index), then fall back to plain .idx.
-        Uri idxGzUri = deriveUri(ifoUri, ".ifo", ".idx.gz");
-        try {
-            InputStream gzIs = context.getContentResolver().openInputStream(idxGzUri);
-            if (gzIs != null) {
-                try (GZIPInputStream gzip = new GZIPInputStream(gzIs)) {
-                    idxData = readAll(gzip);
-                }
-            }
-        } catch (Exception ignored) {
-            // .idx.gz not present or not readable – try plain .idx below
-        }
-        if (idxData == null) {
+        if (idxUri != null) {
             try (InputStream is = context.getContentResolver().openInputStream(idxUri)) {
-                idxData = readAll(is);
+                if (idxUri.toString().endsWith(".gz")) {
+                    try (GZIPInputStream gzip = new GZIPInputStream(is)) {
+                        idxData = readAll(gzip);
+                    }
+                } else {
+                    idxData = readAll(is);
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Could not read .idx file for " + basePath, e);
             }
+        }
+
+        if (idxData == null) {
+            throw new IOException("No .idx or .idx.gz file found for " + basePath);
         }
 
         // ── .dict or .dict.dz ─────────────────────────────────────────────
+        // Try .dict.dz first (gzip-compressed), then fall back to plain .dict
+        Uri dictUri = findCompanionFile(context, ifoUri, ifoPath, new String[]{".dict.dz", ".dict"});
         FileChannel dictChannel = null;
         byte[] dictDzData = null;
 
-        Uri dictDzUri = deriveUri(ifoUri, ".ifo", ".dict.dz");
-        Uri dictUri   = deriveUri(ifoUri, ".ifo", ".dict");
-
-        try {
-            InputStream dzIs = context.getContentResolver().openInputStream(dictDzUri);
-            if (dzIs != null) {
-                try (GZIPInputStream gzip = new GZIPInputStream(dzIs)) {
-                    dictDzData = readAll(gzip);
-                }
-            }
-        } catch (Exception e) {
-            // .dict.dz not present – try plain .dict
-        }
-
-        if (dictDzData == null) {
+        if (dictUri != null) {
             try {
-                FileInputStream fis = (FileInputStream) context.getContentResolver()
-                        .openInputStream(dictUri);
-                if (fis != null) {
-                    dictChannel = fis.getChannel();
+                InputStream is = context.getContentResolver().openInputStream(dictUri);
+                if (dictUri.toString().endsWith(".dz") || dictUri.toString().endsWith(".gz")) {
+                    // Compressed dict file - decompress into memory
+                    try (GZIPInputStream gzip = new GZIPInputStream(is)) {
+                        dictDzData = readAll(gzip);
+                    }
+                } else {
+                    // Uncompressed dict file - use FileChannel for efficiency
+                    if (is instanceof FileInputStream) {
+                        dictChannel = ((FileInputStream) is).getChannel();
+                    } else {
+                        // For SAF URIs, we might not get a FileInputStream
+                        // Fall back to reading into memory
+                        dictDzData = readAll(is);
+                        is.close();
+                    }
                 }
             } catch (Exception e) {
                 Log.w(TAG, "Could not open .dict file for " + basePath, e);
@@ -426,7 +428,70 @@ public final class StarDictDictionary implements Dictionary {
         return out.toByteArray();
     }
 
-    /** Derives a companion file URI by replacing the extension. */
+    /**
+     * Finds a companion file (e.g., .idx, .dict) using SAF-compatible file discovery.
+     * Works with both content:// URIs (SAF) and file:// URIs.
+     *
+     * @param context Android context for content resolver
+     * @param ifoUri  URI of the .ifo file
+     * @param ifoPath Path string of the .ifo file (for fallback)
+     * @param extensions Extensions to try, in order of preference (e.g., [".idx.gz", ".idx"])
+     * @return URI of the found companion file, or null if not found
+     */
+    @Nullable
+    private static Uri findCompanionFile(@NonNull Context context,
+                                          @NonNull Uri ifoUri,
+                                          @NonNull String ifoPath,
+                                          @NonNull String[] extensions) {
+        // For SAF content:// URIs, use DocumentFile API
+        if ("content".equals(ifoUri.getScheme())) {
+            DocumentFile ifoFile = DocumentFile.fromSingleUri(context, ifoUri);
+            if (ifoFile == null || !ifoFile.exists()) {
+                return null;
+            }
+            
+            DocumentFile parentDir = ifoFile.getParentFile();
+            if (parentDir == null || !parentDir.isDirectory()) {
+                return null;
+            }
+            
+            // Get base name without extension
+            String ifoName = ifoFile.getName();
+            if (ifoName == null || !ifoName.endsWith(".ifo")) {
+                return null;
+            }
+            String baseName = ifoName.substring(0, ifoName.length() - 4);
+            
+            // Search for companion files
+            DocumentFile[] files = parentDir.listFiles();
+            for (String ext : extensions) {
+                String targetName = baseName + ext;
+                for (DocumentFile file : files) {
+                    if (targetName.equals(file.getName())) {
+                        return file.getUri();
+                    }
+                }
+            }
+            return null;
+        }
+        
+        // For file:// URIs or other schemes, use simple string manipulation (legacy)
+        for (String ext : extensions) {
+            Uri uri = deriveUri(ifoUri, ".ifo", ext);
+            try {
+                InputStream test = context.getContentResolver().openInputStream(uri);
+                if (test != null) {
+                    test.close();
+                    return uri;
+                }
+            } catch (Exception ignored) {
+                // File doesn't exist, try next extension
+            }
+        }
+        return null;
+    }
+
+    /** Derives a companion file URI by replacing the extension. Used for non-SAF URIs. */
     @NonNull
     private static Uri deriveUri(@NonNull Uri ifoUri,
                                    @NonNull String fromExt,
