@@ -145,12 +145,14 @@ jobs:
           mkdir -p "$(dirname "$KEYSTORE_PATH")"
           echo $KEYSTORE_BASE64 | base64 -d > $KEYSTORE_PATH
 
-      # - name: publish beta
-      #   if: github.event.inputs.publish == 'true'
-      #   run: |
-      #     bundle exec fastlane android beta create_tag:${{ github.event.inputs.publish }} publish:${{ github.event.inputs.publish }} github:false
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: publish beta
+        if: github.event.inputs.publish == 'true'
+        run: |
+          bundle exec fastlane android beta create_tag:${{ github.event.inputs.publish }} publish:${{ github.event.inputs.publish }} github:false
+        env:
+          # provide both names: some fastlane plugins expect GITHUB_API_TOKEN, others use GITHUB_TOKEN
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: publish github
         run: |
