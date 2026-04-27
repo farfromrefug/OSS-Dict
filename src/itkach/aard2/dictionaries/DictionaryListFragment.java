@@ -96,6 +96,11 @@ public class DictionaryListFragment extends BaseListFragment {
         Intent intent = new Intent();
         intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        // Accept all file types including:
+        // - .slob (Aard 2 format)
+        // - .mdx (MDict format)
+        // - .ifo (StarDict format)
+        // - .zip (StarDict archive containing .ifo, .idx, .dict files)
         intent.setType("*/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
