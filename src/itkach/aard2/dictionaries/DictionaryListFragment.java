@@ -16,6 +16,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProvider;
+import android.text.Spanned;
+import androidx.core.text.HtmlCompat;
+import android.widget.TextView;
+import androidx.recyclerview.widget.RecyclerView;
 
 import itkach.aard2.BaseListFragment;
 import itkach.aard2.MainActivity;
@@ -25,6 +29,7 @@ import itkach.aard2.descriptor.SlobDescriptor;
 
 public class DictionaryListFragment extends BaseListFragment {
     private final static String TAG = DictionaryListFragment.class.getSimpleName();
+    private TextView formatsHeader;
 
     private DictionaryListViewModel viewModel;
     private final ActivityResultLauncher<Intent> dictionarySelector = registerForActivityResult(
@@ -54,13 +59,24 @@ public class DictionaryListFragment extends BaseListFragment {
     @DrawableRes
     @Override
     protected int getEmptyIcon() {
-        return R.drawable.ic_library_books;
+        return -1;
     }
 
     @NonNull
     @Override
     protected CharSequence getEmptyText() {
-        return getString(R.string.main_empty_dictionaries);
+        // return a Spanned so links and formatting work
+        String html = getString(R.string.main_empty_dictionaries_template,
+                getString(R.string.main_empty_dictionaries_title),
+                getString(R.string.main_empty_dictionaries_subtitle),
+                getString(R.string.main_empty_dictionaries_formats),
+                getString(R.string.main_empty_dictionaries_download_text),
+                getString(R.string.main_empty_dictionaries_download_url),
+                getString(R.string.here)
+        );
+
+        Spanned sp = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_LEGACY);
+        return sp;
     }
 
     @Override
@@ -69,6 +85,38 @@ public class DictionaryListFragment extends BaseListFragment {
         viewModel = new ViewModelProvider(this).get(DictionaryListViewModel.class);
         DictionaryListAdapter listAdapter = new DictionaryListAdapter(SlobHelper.getInstance().dictionaries, this);
         recyclerView.setAdapter(listAdapter);
+
+
+        // find header (in the fragment_list layout)
+        formatsHeader = view.findViewById(R.id.formats_header);
+        if (formatsHeader != null) {
+            formatsHeader.setText(getString(R.string.formats_supported_header));
+        }
+
+        // update header visibility based on adapter contents
+        updateFormatsHeaderVisibility(listAdapter);
+
+        // observe adapter changes to update header
+        listAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+            @Override
+            public void onChanged() {
+                updateFormatsHeaderVisibility(listAdapter);
+            }
+            @Override
+            public void onItemRangeInserted(int positionStart, int itemCount) {
+                updateFormatsHeaderVisibility(listAdapter);
+            }
+            @Override
+            public void onItemRangeRemoved(int positionStart, int itemCount) {
+                updateFormatsHeaderVisibility(listAdapter);
+            }
+        });
+    }
+
+    private void updateFormatsHeaderVisibility(DictionaryListAdapter adapter) {
+        if (formatsHeader == null || adapter == null) return;
+        boolean hasItems = adapter.getItemCount() > 0;
+        formatsHeader.setVisibility(hasItems ? View.VISIBLE : View.GONE);
     }
 
     @Override
@@ -96,6 +144,11 @@ public class DictionaryListFragment extends BaseListFragment {
         Intent intent = new Intent();
         intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        // Accept all file types including:
+        // - .slob (Aard 2 format)
+        // - .mdx (MDict format)
+        // - .ifo (StarDict format)
+        // - .zip (StarDict archive containing .ifo, .idx, .dict files)
         intent.setType("*/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);

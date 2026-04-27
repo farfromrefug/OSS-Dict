@@ -49,6 +49,35 @@
             <a href="%1$s">%2$s</a>
         ]]>
     </string>
+    <string name="formats_supported_header">Supported formats: .slob, .mdx, .zip (Stardict, GoldenDict)</string>
+
+    <!-- detailed empty text with clickable link; keep as HTML to include anchors -->
+    <string name="main_empty_dictionaries_details">
+        <![CDATA[
+        <b>No dictionaries are open</b><br/><br/>
+        <small>
+        OSS-Dict supports the following formats: <b>.slob</b> (Aard/slob), <b>.mdx</b> (MDict), <b>StarDict</b> as <b>.zip</b> archives containing .ifo/.dict/.idx.<br/><br/>
+        You can download ready-made dictionaries from the project wiki: <a href="https://github.com/itkach/slob/wiki/Dictionaries">Dictionaries (slob repo)</a> or from the OSS‑Dict releases and community repositories.
+        </small>
+        ]]>
+    </string>
+    <string name="main_empty_dictionaries_title">No dictionaries are open</string>
+    <string name="main_empty_dictionaries_subtitle">OSS-Dict supports the following formats</string>
+    <string name="main_empty_dictionaries_download_text">You can find links for dictionaries</string>
+    <string translatable="false" name="main_empty_dictionaries_download_url">https://github.com/itkach/slob/wiki/Dictionaries</string>
+    <string name="main_empty_dictionaries_formats" translatable="false" >
+        <![CDATA[
+<b>.slob</b> (Aard/slob), <b>.mdx</b> (MDict), <b>.zip</b>(StarDict .ifo/.dict/.idx)
+ ]]>
+</string>
+    <string translatable="false" name="main_empty_dictionaries_template"><![CDATA[
+    <b>%1$s</b><br/><br/>
+    <small>
+    %2$s:<br/>%3$s<br/><br/>
+    %4$s <a href="%5$s">%6$s</a>
+    </small>
+]]></string>
+    <string name="here">here</string>
     <string name="application_version">Version %1$s</string>
     <string name="setting_clear_cache">Clear Cache</string>
     <string name="setting_clear_cache_subtitle">Delete cached content including remote images</string>

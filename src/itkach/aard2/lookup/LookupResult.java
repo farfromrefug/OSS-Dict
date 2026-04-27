@@ -14,8 +14,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import itkach.aard2.dictionary.DictionaryEntry;
 import itkach.aard2.utils.ThreadUtils;
-import itkach.slob.Slob;
 
 public class LookupResult {
     public static final String TAG = LookupResult.class.getSimpleName();
@@ -25,8 +25,8 @@ public class LookupResult {
     private final int loadingThreshold;
     private final DataSetObservable dataSetObservable;
 
-    private final List<Slob.Blob> chunkList;
-    private Iterator<Slob.Blob> resultIterator;
+    private final List<DictionaryEntry> chunkList;
+    private Iterator<DictionaryEntry> resultIterator;
 
     public LookupResult() {
         this(20, 10);
@@ -50,7 +50,7 @@ public class LookupResult {
     }
 
     @WorkerThread
-    public void setResult(@NonNull Iterator<Slob.Blob> resultIterator) {
+    public void setResult(@NonNull Iterator<DictionaryEntry> resultIterator) {
         chunkList.clear();
         dataSetObservable.notifyChanged();
         // Update data
@@ -59,13 +59,14 @@ public class LookupResult {
     }
 
     @AnyThread
-    public List<Slob.Blob> getList() {
+    public List<DictionaryEntry> getList() {
         return chunkList;
     }
 
     @AnyThread
     public void loadMoreItems(int index) {
-        if (resultIterator.hasNext() && index >= (chunkList.size() - loadingThreshold)) {
+        if (resultIterator != null && resultIterator.hasNext()
+                && index >= (chunkList.size() - loadingThreshold)) {
             ThreadUtils.postOnBackgroundThread(this::loadChunksSync);
         }
     }
@@ -74,11 +75,11 @@ public class LookupResult {
     private void loadChunksSync() {
         long t0 = System.currentTimeMillis();
         int count = 0;
-        final List<Slob.Blob> chunkList = new LinkedList<>();
+        final List<DictionaryEntry> chunkList = new LinkedList<>();
 
         while (resultIterator.hasNext() && count < chunkSize && this.chunkList.size() <= MAX_SIZE) {
             count++;
-            Slob.Blob b = resultIterator.next();
+            DictionaryEntry b = resultIterator.next();
             chunkList.add(b);
         }
 

@@ -5,6 +5,7 @@ import androidx.annotation.Nullable;
 
 import itkach.aard2.descriptor.DescriptorStore;
 import itkach.aard2.descriptor.SlobDescriptor;
+import itkach.aard2.dictionary.Dictionary;
 import itkach.aard2.utils.Utils;
 import itkach.slob.Slob;
 
@@ -26,7 +27,14 @@ public class SlobDescriptorList extends BaseDescriptorList<SlobDescriptor> {
     }
 
     @Nullable
-    public Slob resolve(@NonNull SlobDescriptor sd) {
+    public Dictionary resolve(@NonNull SlobDescriptor sd) {
+        return SlobHelper.getInstance().getDictionary(sd.id);
+    }
+
+    /** @deprecated Use {@link #resolve(SlobDescriptor)} for format-agnostic code. */
+    @Deprecated
+    @Nullable
+    public Slob resolveSlob(@NonNull SlobDescriptor sd) {
         return SlobHelper.getInstance().getSlob(sd.id);
     }
 

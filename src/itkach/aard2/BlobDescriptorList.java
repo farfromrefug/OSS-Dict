@@ -7,6 +7,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.MainThread;
+import androidx.annotation.Nullable;
 
 import com.ibm.icu.text.Collator;
 import com.ibm.icu.text.RuleBasedCollator;
@@ -23,6 +24,9 @@ import java.util.Locale;
 
 import itkach.aard2.descriptor.BlobDescriptor;
 import itkach.aard2.descriptor.DescriptorStore;
+import itkach.aard2.dictionary.Dictionary;
+import itkach.aard2.dictionary.DictionaryEntry;
+import itkach.aard2.dictionary.SlobDictionary;
 import itkach.aard2.utils.ThreadUtils;
 import itkach.aard2.utils.Utils;
 import itkach.slob.Slob;
@@ -152,50 +156,67 @@ public class BlobDescriptorList extends AbstractList<BlobDescriptor> {
         ThreadUtils.postOnMainThread(() -> doUpdateLastAccess(bd));
     }
 
-    Slob resolveOwner(BlobDescriptor bd) {
-        Slob slob = SlobHelper.getInstance().getSlob(bd.slobId);
-//        if (slob == null || !slob.file.exists()) {
-        if (slob == null) {
-            slob = SlobHelper.getInstance().findSlob(bd.slobUri);
+    @Nullable
+    Dictionary resolveOwner(BlobDescriptor bd) {
+        // First try by ID
+        Dictionary dict = SlobHelper.getInstance().getDictionary(bd.slobId);
+        if (dict == null) {
+            dict = SlobHelper.getInstance().findDictionary(bd.slobUri);
         }
-        return slob;
+        return dict;
     }
 
-    public Slob.Blob resolve(BlobDescriptor bd) {
-        Slob slob = resolveOwner(bd);
-        Slob.Blob blob = null;
-        if (slob == null) {
+    @Nullable
+    public DictionaryEntry resolve(BlobDescriptor bd) {
+        Dictionary dict = resolveOwner(bd);
+        if (dict == null) {
             return null;
         }
-        String slobId = slob.getId().toString();
-        if (slobId.equals(bd.slobId)) {
-            blob = new Slob.Blob(slob, bd.blobId, bd.key, bd.fragment);
+        DictionaryEntry entry;
+        String dictId = dict.getId();
+        if (dictId.equals(bd.slobId)) {
+            entry = new DictionaryEntry(dict, bd.blobId, bd.key, bd.fragment);
         } else {
+            // Dictionary was replaced – re-find by key (use SECONDARY_PREFIX for case-insensitive and prefix)
             try {
-                Iterator<Slob.Blob> result = slob.find(bd.key, Slob.Strength.QUATERNARY);
+                Iterator<DictionaryEntry> result = dict.find(bd.key, Slob.Strength.SECONDARY_PREFIX);
                 if (result.hasNext()) {
-                    blob = result.next();
-                    bd.slobId = slobId;
-                    bd.blobId = blob.id;
+                    entry = result.next();
+                    bd.slobId = dictId;
+                    bd.blobId = entry.id;
+                } else {
+                    entry = null;
                 }
             } catch (Exception ex) {
-                Log.w(TAG, String.format("Failed to resolve descriptor %s (%s) in %s (%s)",
-                                bd.blobId, bd.key, slob.getId(), slob.fileURI), ex);
+                Log.w(TAG, String.format("Failed to resolve descriptor %s (%s) in %s",
+                        bd.blobId, bd.key, dictId), ex);
+                entry = null;
             }
         }
-        if (blob != null) {
+        if (entry != null) {
             updateLastAccess(bd);
         }
-        return blob;
+        return entry;
+    }
+
+    /** @deprecated Use {@link #resolveOwner(BlobDescriptor)} instead. */
+    @Deprecated
+    @Nullable
+    Slob resolveSlobOwner(BlobDescriptor bd) {
+        return SlobHelper.getInstance().getSlob(bd.slobId);
     }
 
     protected BlobDescriptor createDescriptor(Uri contentUri) {
         Log.d(TAG, "Create descriptor from content url: " + contentUri);
         BlobDescriptor bd = BlobDescriptor.fromUri(contentUri);
         if (bd != null) {
-            String slobUri = SlobHelper.getInstance().getSlobUri(bd.slobId);
-            Log.d(TAG, "Found slob uri for: " + bd.slobId + " " + slobUri);
-            bd.slobUri = slobUri;
+            String dictUri = SlobHelper.getInstance().getDictionaryUri(bd.slobId);
+            if (dictUri == null) {
+                // Fallback for legacy Slob descriptors
+                dictUri = SlobHelper.getInstance().getSlobUri(bd.slobId);
+            }
+            Log.d(TAG, "Found dict uri for: " + bd.slobId + " " + dictUri);
+            bd.slobUri = dictUri;
         }
         return bd;
     }

@@ -373,7 +373,11 @@ public class ArticleWebView extends SearchableWebView {
             BlobDescriptor bd = BlobDescriptor.fromUri(uri);
             if (bd != null) {
                 currentSlobId = bd.slobId;
-                currentSlobUri = SlobHelper.getInstance().getSlobUri(currentSlobId);
+                // Try format-agnostic URI first, fall back to slob-specific
+                currentSlobUri = SlobHelper.getInstance().getDictionaryUri(currentSlobId);
+                if (currentSlobUri == null) {
+                    currentSlobUri = SlobHelper.getInstance().getSlobUri(currentSlobId);
+                }
                 loadAvailableStylesPref();
             } else {
                 currentSlobId = null;

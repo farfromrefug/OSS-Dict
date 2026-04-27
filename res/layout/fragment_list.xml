@@ -1,18 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
+
+    <!-- Header shown only when there are dictionaries -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/formats_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:visibility="gone"/>
 
     <itkach.aard2.widget.RecyclerView
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:scrollbars="vertical"
-        tools:visibility="gone"
-        tools:listitem="@layout/blob_descriptor_list_item" />
+        tools:listitem="@layout/blob_descriptor_list_item"
+        tools:visibility="gone" />
 
     <include layout="@layout/empty_view" />
 
-</FrameLayout>
+</LinearLayout>
