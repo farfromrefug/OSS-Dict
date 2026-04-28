@@ -284,7 +284,7 @@ platform :android do
     puts Actions.lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
     puts Actions.lane_context[SharedValues::GRADLE_ALL_APK_OUTPUT_PATHS]
     upload_to_play_store(
-      package_name: 'com.akylas.aard2'
+      package_name: 'com.akylas.aard2',
       track: track,
       metadata_path:File.join(metadata_path_realpath, "android"),
       track_promote_to: track,
