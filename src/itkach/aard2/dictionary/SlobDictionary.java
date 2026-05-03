@@ -94,6 +94,7 @@ public final class SlobDictionary implements Dictionary {
             Slob.Content content = slob.getContent(blobId);
             return new DictionaryContent(content.type, content.data);
         } catch (Exception e) {
+            e.printStackTrace();
             return null;
         }
     }
