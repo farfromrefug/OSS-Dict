@@ -70,7 +70,7 @@
     <string name="setting_ui_theme_auto">自动</string>
     <string name="action_yes">是</string>
     <string name="action_no">否</string>
-    <string name="setting_enable_force_dark_web_view">允许在webview中强制使用暗黑模式</string>
+    <string name="setting_enable_force_dark_web_view">允许在WebView中强制使用暗黑模式</string>
     <string name="setting_disable_javascript_title">禁用JavaScript</string>
     <string name="setting_disable_javascript_subtitle">禁用JavaScript可能会出现一些问题，例如应用自定义样式和加载远程内容等问题。</string>
     <string name="specified_number_of_items_selected">已选择%d条</string>
