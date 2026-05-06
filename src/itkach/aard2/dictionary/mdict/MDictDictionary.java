@@ -837,10 +837,12 @@ public final class MDictDictionary implements Dictionary {
      */
     private static void saveToCache(@NonNull File cacheFile,
                                      @NonNull MDictDictionary dict) {
-        // getAbsoluteFile() guarantees a non-null parent.
+        // Use getAbsoluteFile() so that getParentFile() is non-null in all
+        // realistic cases (files under context.getFilesDir() are always absolute).
         File absCache = cacheFile.getAbsoluteFile();
         File parent = absCache.getParentFile();
         if (parent == null) {
+            // Defensive: should never happen for a path under context.getFilesDir().
             Log.w(TAG, "Cannot determine parent directory for cache: " + cacheFile);
             return;
         }

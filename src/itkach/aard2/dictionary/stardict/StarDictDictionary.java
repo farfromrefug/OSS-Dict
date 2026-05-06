@@ -252,6 +252,10 @@ public final class StarDictDictionary implements Dictionary {
     static void extractArchiveToDir(@NonNull Context context,
                                      @NonNull Uri archiveUri,
                                      @NonNull File outDir) throws IOException {
+        // Compute canonical form of outDir ONCE for ZipSlip protection.
+        // Every extracted file's canonical path must start with this prefix.
+        final String canonOutDir = outDir.getCanonicalPath() + File.separator;
+
         try (InputStream raw = context.getContentResolver().openInputStream(archiveUri)) {
             if (raw == null) throw new IOException("Cannot open archive URI: " + archiveUri);
             try (ZipInputStream zis = new ZipInputStream(raw)) {
@@ -262,34 +266,39 @@ public final class StarDictDictionary implements Dictionary {
                         int lastSlash = name.lastIndexOf('/');
                         if (lastSlash >= 0) name = name.substring(lastSlash + 1);
 
-                        // Reject any entry whose leaf name is empty, is a
-                        // directory alias ("."), or a parent reference ("..").
-                        // After lastIndexOf('/') extraction the name cannot
-                        // contain '/' so only the ".." case needs guarding.
-                        if (name.isEmpty() || name.equals("..") || name.equals(".")) {
+                        // Guard against ZipSlip: verify the resolved output path
+                        // stays inside outDir (handles ".", "..", encoded sequences, etc.).
+                        if (name.isEmpty()) {
+                            zis.closeEntry();
+                            continue;
+                        }
+                        File outFile = new File(outDir, name);
+                        if (!outFile.getCanonicalPath().startsWith(canonOutDir)) {
+                            Log.w(TAG, "Skipping unsafe ZIP entry: " + entry.getName());
                             zis.closeEntry();
                             continue;
                         }
 
                         if (name.endsWith(".ifo") || name.endsWith(".idx")) {
-                            copyStreamToFile(zis, new File(outDir, name));
+                            copyStreamToFile(zis, outFile);
                         } else if (name.endsWith(".idx.gz")) {
-                            // Strip the .gz suffix: "foo.idx.gz" → "foo.idx"
-                            String outName = name.substring(0, name.length() - 3);
+                            // Decompress .gz suffix: "foo.idx.gz" → "foo.idx"
+                            // (strip last 3 chars: .gz = 3 chars)
+                            File out = new File(outDir, name.substring(0, name.length() - 3));
                             NonClosingInputStream ncs = new NonClosingInputStream(zis);
                             try (GZIPInputStream gzip = new GZIPInputStream(ncs)) {
-                                copyStreamToFile(gzip, new File(outDir, outName));
+                                copyStreamToFile(gzip, out);
                             }
                         } else if (name.endsWith(".dict.dz")) {
-                            // Strip the .dz suffix: "foo.dict.dz" → "foo.dict"
-                            String outName = name.substring(0, name.length() - 3);
+                            // Decompress .dz suffix: "foo.dict.dz" → "foo.dict"
+                            // (strip last 3 chars: .dz = 3 chars)
+                            File out = new File(outDir, name.substring(0, name.length() - 3));
                             NonClosingInputStream ncs = new NonClosingInputStream(zis);
                             try (GZIPInputStream gzip = new GZIPInputStream(ncs)) {
-                                copyStreamToFile(gzip, new File(outDir, outName));
+                                copyStreamToFile(gzip, out);
                             }
                         } else if (name.endsWith(".dict")) {
-                            NonClosingInputStream ncs = new NonClosingInputStream(zis);
-                            copyStreamToFile(ncs, new File(outDir, name));
+                            copyStreamToFile(zis, outFile);
                         }
                     }
                     zis.closeEntry();
