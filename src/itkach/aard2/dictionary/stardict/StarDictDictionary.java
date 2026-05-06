@@ -1000,6 +1000,54 @@ public final class StarDictDictionary implements Dictionary {
     }
 
     /**
+     * Removes all persistent data that was created for a StarDict archive
+     * dictionary when it was first added:
+     * <ul>
+     *   <li>The extracted-files directory
+     *       ({@code getFilesDir()/dicts/stardict/<hash>/})</li>
+     *   <li>The key-index cache file
+     *       ({@code getFilesDir()/dicts/stardict/<hash>.keys})</li>
+     * </ul>
+     *
+     * <p>Call this when the user removes / "forgets" the dictionary so that
+     * the app does not accumulate stale data in internal storage.</p>
+     *
+     * @param context     the application context
+     * @param archivePath the URI string of the original archive (same value
+     *                    that was passed to {@link #fromArchiveUri})
+     */
+    public static void cleanupPersistedData(@NonNull Context context,
+                                             @NonNull String archivePath) {
+        File baseDir = new File(context.getFilesDir(), "dicts/stardict");
+        String dirName = Long.toHexString(stableHash64(archivePath) & Long.MAX_VALUE);
+        File extractDir = new File(baseDir, dirName);
+        File keysCache  = new File(baseDir, dirName + ".keys");
+        deleteRecursively(extractDir);
+        deleteSilently(keysCache);
+    }
+
+    /**
+     * Recursively deletes {@code file}.  If {@code file} is a directory, its
+     * contents are deleted depth-first before the directory itself is removed.
+     * Logs a warning for any entry that cannot be deleted but does <em>not</em>
+     * throw; safe to call on non-existent paths.
+     */
+    private static void deleteRecursively(@Nullable File file) {
+        if (file == null || !file.exists()) return;
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteRecursively(child);
+                }
+            }
+        }
+        if (!file.delete()) {
+            Log.w(TAG, "Could not delete: " + file.getPath());
+        }
+    }
+
+    /**
      * Copies all bytes from {@code in} into a new temporary file inside the
      * app's cache directory and returns a reference to that file.
      *

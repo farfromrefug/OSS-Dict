@@ -756,6 +756,25 @@ public final class MDictDictionary implements Dictionary {
     }
 
     /**
+     * Removes the persisted index cache that was created for this MDX file
+     * when it was first loaded.
+     *
+     * <p>Call this when the user removes / "forgets" the dictionary so that
+     * the app does not accumulate stale data in internal storage.</p>
+     *
+     * @param context  the application context
+     * @param filePath the URI / path string of the MDX file (same value
+     *                 that was passed to {@link #fromUri})
+     */
+    public static void cleanupPersistedData(@NonNull Context context,
+                                             @NonNull String filePath) {
+        File cache = cacheFile(context, filePath);
+        if (cache.exists() && !cache.delete()) {
+            Log.w(TAG, "Could not delete MDict index cache: " + cache);
+        }
+    }
+
+    /**
      * Tries to construct an {@link MDictDictionary} from the on-disk index
      * cache.  Returns {@code null} if the cache does not exist, has a stale
      * fingerprint, or is corrupt in any way.

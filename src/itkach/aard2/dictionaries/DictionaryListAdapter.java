@@ -199,7 +199,14 @@ public class DictionaryListAdapter extends RecyclerView.Adapter<DictionaryListAd
                 .setIcon(android.R.drawable.ic_dialog_alert)
                 .setTitle("")
                 .setMessage(message)
-                .setPositiveButton(R.string.action_yes, (dialog, which) -> data.remove(position))
+                .setPositiveButton(R.string.action_yes, (dialog, which) -> {
+                    data.remove(position);
+                    // Clean up extracted / cached files on a background thread so
+                    // the UI is not blocked and potentially large directories are
+                    // removed without freezing the activity.
+                    Context appCtx = context.getApplicationContext();
+                    ThreadUtils.postOnBackgroundThread(() -> desc.cleanupPersistedData(appCtx));
+                })
                 .setNegativeButton(R.string.action_no, null)
                 .create();
         deleteConfirmationDialog.setOnDismissListener(dialogInterface -> deleteConfirmationDialog = null);
