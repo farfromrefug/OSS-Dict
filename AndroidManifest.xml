@@ -21,7 +21,8 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config"
-        tools:ignore="UnusedAttribute">
+        tools:ignore="UnusedAttribute"
+        android:largeHeap="true">
 
         <activity
             android:name=".MainActivity"
