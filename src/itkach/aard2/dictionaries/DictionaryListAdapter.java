@@ -208,7 +208,7 @@ public class DictionaryListAdapter extends RecyclerView.Adapter<DictionaryListAd
                     ThreadUtils.postOnBackgroundThread(() -> {
                         try {
                             desc.cleanupPersistedData(appCtx);
-                        } catch (SecurityException | RuntimeException e) {
+                        } catch (Exception e) {
                             Log.w(TAG, "Failed to clean up persisted data for "
                                     + desc.path, e);
                         }
