@@ -205,7 +205,14 @@ public class DictionaryListAdapter extends RecyclerView.Adapter<DictionaryListAd
                     // the UI is not blocked and potentially large directories are
                     // removed without freezing the activity.
                     Context appCtx = context.getApplicationContext();
-                    ThreadUtils.postOnBackgroundThread(() -> desc.cleanupPersistedData(appCtx));
+                    ThreadUtils.postOnBackgroundThread(() -> {
+                        try {
+                            desc.cleanupPersistedData(appCtx);
+                        } catch (Exception e) {
+                            Log.w(TAG, "Failed to clean up persisted data for "
+                                    + desc.path, e);
+                        }
+                    });
                 })
                 .setNegativeButton(R.string.action_no, null)
                 .create();

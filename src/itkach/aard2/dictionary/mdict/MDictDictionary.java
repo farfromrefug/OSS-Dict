@@ -769,7 +769,7 @@ public final class MDictDictionary implements Dictionary {
     public static void cleanupPersistedData(@NonNull Context context,
                                              @NonNull String filePath) {
         File cache = cacheFile(context, filePath);
-        if (cache.exists() && !cache.delete()) {
+        if (!cache.delete() && cache.exists()) {
             Log.w(TAG, "Could not delete MDict index cache: " + cache);
         }
     }

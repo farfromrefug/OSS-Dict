@@ -221,14 +221,13 @@ public final class StarDictDictionary implements Dictionary {
     public static StarDictDictionary fromArchiveUri(@NonNull Context context,
                                                       @NonNull Uri archiveUri,
                                                       @NonNull String archivePath) throws IOException {
-        // Use a stable directory name derived from the archive path so the
-        // same archive always maps to the same extraction directory.
-        // We mix several hash contributions to reduce collision probability.
-        File baseDir = new File(context.getFilesDir(), "dicts/stardict");
-        String dirName = Long.toHexString(stableHash64(archivePath) & Long.MAX_VALUE);
+        // Derive stable paths so the same archive always maps to the same
+        // extraction directory and key-cache file across app restarts.
+        File baseDir    = starDictPersistBaseDir(context);
+        String dirName  = starDictHashName(archivePath);
         File extractDir = new File(baseDir, dirName);
         // Key-index cache lives as a sibling file next to the extracted directory.
-        File keysCache = new File(baseDir, dirName + ".keys");
+        File keysCache  = new File(baseDir, dirName + ".keys");
 
         // Fast path: already extracted on a previous run.
         File ifoFile = findIfoFile(extractDir);
@@ -999,6 +998,22 @@ public final class StarDictDictionary implements Dictionary {
         return h;
     }
 
+    /** Returns the base directory under which StarDict extraction/cache files are stored. */
+    @NonNull
+    private static File starDictPersistBaseDir(@NonNull Context context) {
+        return new File(context.getFilesDir(), "dicts/stardict");
+    }
+
+    /**
+     * Returns the stable hex directory/file name derived from {@code archivePath}.
+     * Used by both loading ({@link #fromArchiveUri}) and cleanup
+     * ({@link #cleanupPersistedData}) to locate the same files.
+     */
+    @NonNull
+    private static String starDictHashName(@NonNull String archivePath) {
+        return Long.toHexString(stableHash64(archivePath) & Long.MAX_VALUE);
+    }
+
     /**
      * Removes all persistent data that was created for a StarDict archive
      * dictionary when it was first added:
@@ -1018,8 +1033,8 @@ public final class StarDictDictionary implements Dictionary {
      */
     public static void cleanupPersistedData(@NonNull Context context,
                                              @NonNull String archivePath) {
-        File baseDir = new File(context.getFilesDir(), "dicts/stardict");
-        String dirName = Long.toHexString(stableHash64(archivePath) & Long.MAX_VALUE);
+        File baseDir    = starDictPersistBaseDir(context);
+        String dirName  = starDictHashName(archivePath);
         File extractDir = new File(baseDir, dirName);
         File keysCache  = new File(baseDir, dirName + ".keys");
         deleteRecursively(extractDir);
