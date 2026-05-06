@@ -745,7 +745,13 @@ public final class MDictDictionary implements Dictionary {
     @NonNull
     private static File cacheFile(@NonNull Context context, @NonNull String filePath) {
         File cacheDir = new File(context.getFilesDir(), "dicts/mdict");
-        String name = Long.toHexString(Math.abs((long) filePath.hashCode())) + ".cache";
+        // Use a FNV-1a 64-bit hash for a stable, low-collision directory name.
+        long h = 0xcbf29ce484222325L;
+        for (int i = 0; i < filePath.length(); i++) {
+            h ^= filePath.charAt(i);
+            h *= 0x100000001b3L;
+        }
+        String name = Long.toHexString(h & Long.MAX_VALUE) + ".cache";
         return new File(cacheDir, name);
     }
 
@@ -831,12 +837,18 @@ public final class MDictDictionary implements Dictionary {
      */
     private static void saveToCache(@NonNull File cacheFile,
                                      @NonNull MDictDictionary dict) {
-        File parent = cacheFile.getParentFile();
-        if (parent != null && !parent.mkdirs() && !parent.isDirectory()) {
+        // getAbsoluteFile() guarantees a non-null parent.
+        File absCache = cacheFile.getAbsoluteFile();
+        File parent = absCache.getParentFile();
+        if (parent == null) {
+            Log.w(TAG, "Cannot determine parent directory for cache: " + cacheFile);
+            return;
+        }
+        if (!parent.mkdirs() && !parent.isDirectory()) {
             Log.w(TAG, "Cannot create cache directory: " + parent);
             return;
         }
-        File tmp = new File(cacheFile.getParent(), cacheFile.getName() + ".tmp");
+        File tmp = new File(parent, absCache.getName() + ".tmp");
         try {
             long fileSize = dict.fileChannel.size();
             try (DataOutputStream dos = new DataOutputStream(
@@ -872,8 +884,8 @@ public final class MDictDictionary implements Dictionary {
                 // Record blocks start
                 dos.writeLong(dict.recordBlocksStart);
             }
-            if (!tmp.renameTo(cacheFile)) {
-                Log.w(TAG, "Failed to rename cache temp file to " + cacheFile);
+            if (!tmp.renameTo(absCache)) {
+                Log.w(TAG, "Failed to rename cache temp file to " + absCache);
                 //noinspection ResultOfMethodCallIgnored
                 tmp.delete();
             } else {

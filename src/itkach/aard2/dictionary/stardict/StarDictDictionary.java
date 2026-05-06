@@ -208,8 +208,9 @@ public final class StarDictDictionary implements Dictionary {
                                                       @NonNull String archivePath) throws IOException {
         // Use a stable directory name derived from the archive path so the
         // same archive always maps to the same extraction directory.
+        // We mix several hash contributions to reduce collision probability.
         File baseDir = new File(context.getFilesDir(), "dicts/stardict");
-        String dirName = Long.toHexString(Math.abs((long) archivePath.hashCode()));
+        String dirName = Long.toHexString(stableHash64(archivePath) & Long.MAX_VALUE);
         File extractDir = new File(baseDir, dirName);
 
         // Fast path: already extracted on a previous run.
@@ -218,7 +219,10 @@ public final class StarDictDictionary implements Dictionary {
             // Slow path (one-time only): extract all relevant files from the ZIP,
             // decompressing .dict.dz → .dict and .idx.gz → .idx on the fly.
             Log.i(TAG, "Extracting StarDict archive to " + extractDir);
-            if (!extractDir.mkdirs() && !extractDir.isDirectory()) {
+            // mkdirs() may legitimately return false when the directory already
+            // exists (e.g. a concurrent load): only fail if the dir is still absent.
+            extractDir.mkdirs();
+            if (!extractDir.isDirectory()) {
                 throw new IOException("Cannot create extract directory: " + extractDir);
             }
             extractArchiveToDir(context, archiveUri, extractDir);
@@ -257,6 +261,15 @@ public final class StarDictDictionary implements Dictionary {
                         String name = entry.getName();
                         int lastSlash = name.lastIndexOf('/');
                         if (lastSlash >= 0) name = name.substring(lastSlash + 1);
+
+                        // Reject any entry whose leaf name is empty, is a
+                        // directory alias ("."), or a parent reference ("..").
+                        // After lastIndexOf('/') extraction the name cannot
+                        // contain '/' so only the ".." case needs guarding.
+                        if (name.isEmpty() || name.equals("..") || name.equals(".")) {
+                            zis.closeEntry();
+                            continue;
+                        }
 
                         if (name.endsWith(".ifo") || name.endsWith(".idx")) {
                             copyStreamToFile(zis, new File(outDir, name));
@@ -807,6 +820,20 @@ public final class StarDictDictionary implements Dictionary {
             }
         }
         return tags;
+    }
+
+    /**
+     * Returns a stable 64-bit hash of {@code s} using a simple polynomial
+     * rolling hash.  More collision-resistant than {@code String.hashCode()}
+     * for use as a directory/file name.
+     */
+    private static long stableHash64(@NonNull String s) {
+        long h = 0xcbf29ce484222325L; // FNV-1a offset basis (adapted)
+        for (int i = 0; i < s.length(); i++) {
+            h ^= s.charAt(i);
+            h *= 0x100000001b3L;      // FNV prime
+        }
+        return h;
     }
 
     /**
