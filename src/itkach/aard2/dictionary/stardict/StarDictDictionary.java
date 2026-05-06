@@ -182,23 +182,168 @@ public final class StarDictDictionary implements Dictionary {
 
     /**
      * Opens a StarDict dictionary from a compressed archive (ZIP).
-     * The archive must contain .ifo, .idx (or .idx.gz), and .dict (or .dict.dz) files
-     * with the same base name.
      *
-     * <p>The .ifo and .idx files are read into memory (they are small). The .dict
-     * content is streamed directly to a temporary file in the app's cache directory
-     * so that the entire dictionary body is never held in RAM.</p>
+     * <p>On the first call for a given archive, the contents are extracted to a
+     * persistent sub-directory of {@code context.getFilesDir()} so that
+     * subsequent calls load directly from the extracted files without touching
+     * the ZIP again.  This makes all loads after the first as fast as opening a
+     * plain StarDict directory.</p>
+     *
+     * <p>The .ifo and .idx files are read into memory (they are small). The
+     * .dict content is kept on disk and accessed lazily via a
+     * {@link FileChannel}.  If the archive contains a .dict.dz file, it is
+     * decompressed during extraction so that no gzip processing is needed on
+     * subsequent loads.</p>
      *
      * @param context Android context for content resolver
      * @param archiveUri URI of the archive file (.zip)
-     * @param archivePath Display path of the archive
-     * @return StarDictDictionary loaded from the archive
+     * @param archivePath Display path of the archive (used to derive the
+     *                    stable extraction directory name)
+     * @return StarDictDictionary loaded from the archive (or extracted files)
      * @throws IOException if files cannot be read or required files are missing
      */
     @NonNull
     public static StarDictDictionary fromArchiveUri(@NonNull Context context,
                                                       @NonNull Uri archiveUri,
                                                       @NonNull String archivePath) throws IOException {
+        // Use a stable directory name derived from the archive path so the
+        // same archive always maps to the same extraction directory.
+        File baseDir = new File(context.getFilesDir(), "dicts/stardict");
+        String dirName = Long.toHexString(Math.abs((long) archivePath.hashCode()));
+        File extractDir = new File(baseDir, dirName);
+
+        // Fast path: already extracted on a previous run.
+        File ifoFile = findIfoFile(extractDir);
+        if (ifoFile == null) {
+            // Slow path (one-time only): extract all relevant files from the ZIP,
+            // decompressing .dict.dz → .dict and .idx.gz → .idx on the fly.
+            Log.i(TAG, "Extracting StarDict archive to " + extractDir);
+            if (!extractDir.mkdirs() && !extractDir.isDirectory()) {
+                throw new IOException("Cannot create extract directory: " + extractDir);
+            }
+            extractArchiveToDir(context, archiveUri, extractDir);
+            ifoFile = findIfoFile(extractDir);
+        }
+
+        if (ifoFile == null) {
+            // Extraction produced no .ifo file – fall back to the streaming approach.
+            Log.w(TAG, "No .ifo found after extraction of " + archivePath
+                    + "; falling back to streaming");
+            return fromArchiveUriStreaming(context, archiveUri, archivePath);
+        }
+
+        Log.d(TAG, "Loading extracted StarDict from " + ifoFile.getPath());
+        return fromExtractedDir(extractDir, ifoFile, archivePath);
+    }
+
+    /**
+     * Extracts all StarDict-relevant files from a ZIP archive into {@code outDir}.
+     * <ul>
+     *   <li>.ifo and .idx are copied verbatim.</li>
+     *   <li>.idx.gz is decompressed to .idx.</li>
+     *   <li>.dict.dz is decompressed to .dict.</li>
+     *   <li>.dict is copied verbatim.</li>
+     * </ul>
+     */
+    static void extractArchiveToDir(@NonNull Context context,
+                                     @NonNull Uri archiveUri,
+                                     @NonNull File outDir) throws IOException {
+        try (InputStream raw = context.getContentResolver().openInputStream(archiveUri)) {
+            if (raw == null) throw new IOException("Cannot open archive URI: " + archiveUri);
+            try (ZipInputStream zis = new ZipInputStream(raw)) {
+                ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (!entry.isDirectory()) {
+                        String name = entry.getName();
+                        int lastSlash = name.lastIndexOf('/');
+                        if (lastSlash >= 0) name = name.substring(lastSlash + 1);
+
+                        if (name.endsWith(".ifo") || name.endsWith(".idx")) {
+                            copyStreamToFile(zis, new File(outDir, name));
+                        } else if (name.endsWith(".idx.gz")) {
+                            // Strip the .gz suffix: "foo.idx.gz" → "foo.idx"
+                            String outName = name.substring(0, name.length() - 3);
+                            NonClosingInputStream ncs = new NonClosingInputStream(zis);
+                            try (GZIPInputStream gzip = new GZIPInputStream(ncs)) {
+                                copyStreamToFile(gzip, new File(outDir, outName));
+                            }
+                        } else if (name.endsWith(".dict.dz")) {
+                            // Strip the .dz suffix: "foo.dict.dz" → "foo.dict"
+                            String outName = name.substring(0, name.length() - 3);
+                            NonClosingInputStream ncs = new NonClosingInputStream(zis);
+                            try (GZIPInputStream gzip = new GZIPInputStream(ncs)) {
+                                copyStreamToFile(gzip, new File(outDir, outName));
+                            }
+                        } else if (name.endsWith(".dict")) {
+                            NonClosingInputStream ncs = new NonClosingInputStream(zis);
+                            copyStreamToFile(ncs, new File(outDir, name));
+                        }
+                    }
+                    zis.closeEntry();
+                }
+            }
+        }
+    }
+
+    /**
+     * Loads a StarDict dictionary from an already-extracted directory of plain
+     * (uncompressed) StarDict files.  The {@code .dict} file is opened with a
+     * seekable {@link FileChannel} so entry content is fetched lazily.
+     */
+    @NonNull
+    private static StarDictDictionary fromExtractedDir(@NonNull File extractDir,
+                                                         @NonNull File ifoFile,
+                                                         @NonNull String archivePath)
+            throws IOException {
+        // Parse the .ifo file directly (no ContentResolver needed for local files)
+        Map<String, String> ifoTags = readIfoFile(ifoFile);
+
+        String baseName = ifoFile.getName();
+        baseName = baseName.substring(0, baseName.length() - 4); // strip .ifo
+
+        // Read the .idx file into memory (small, needed for search)
+        File idxFile = new File(extractDir, baseName + ".idx");
+        if (!idxFile.exists()) {
+            throw new IOException("Missing .idx after extraction: " + idxFile);
+        }
+        byte[] idxData;
+        try (FileInputStream fis = new FileInputStream(idxFile)) {
+            idxData = readAll(fis);
+        }
+
+        // Open the .dict file with a seekable FileChannel
+        File dictFile = new File(extractDir, baseName + ".dict");
+        if (!dictFile.exists()) {
+            throw new IOException("Missing .dict after extraction: " + dictFile);
+        }
+        FileInputStream dictFis = new FileInputStream(dictFile);
+        FileChannel dictChannel = dictFis.getChannel();
+
+        // Use archivePath as the basePath so the dictionary ID is the same
+        // whether we load from the persistent extracted dir or via streaming.
+        String basePath = archivePath.endsWith(".ifo")
+                ? archivePath.substring(0, archivePath.length() - 4)
+                : archivePath;
+
+        StarDictDictionary result = parse(ifoTags, idxData, dictChannel, null, basePath);
+        result.dictFis = dictFis;
+        return result;
+    }
+
+    // -----------------------------------------------------------------------
+    // Streaming fallback for fromArchiveUri (no Context.getFilesDir available
+    // or extraction to persistent dir failed)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Streaming fallback: opens a StarDict dictionary from a ZIP archive by
+     * extracting the .dict body to a temporary file (lives only for the
+     * current process lifetime).  Used when persistent extraction fails.
+     */
+    @NonNull
+    private static StarDictDictionary fromArchiveUriStreaming(@NonNull Context context,
+                                                               @NonNull Uri archiveUri,
+                                                               @NonNull String archivePath) throws IOException {
         // Small files (.ifo, .idx, .idx.gz) are held in memory.
         // The .dict or .dict.dz content is streamed to a temp file to avoid
         // loading the entire dictionary body into RAM.
@@ -227,16 +372,12 @@ public final class StarDictDictionary implements Dictionary {
                             smallFiles.put(name, data);
                             Log.d(TAG, "Read into memory: " + name + " (" + data.length + " bytes)");
                         } else if (name.endsWith(".dict.dz")) {
-                            // Decompress the gzip layer on the fly while writing to a temp file
-                            // so that neither the compressed nor the decompressed data needs to
-                            // be held in memory simultaneously.
                             NonClosingInputStream nonClosingStream = new NonClosingInputStream(zis);
                             try (GZIPInputStream gzip = new GZIPInputStream(nonClosingStream)) {
                                 tempDictFile = extractToTempFile(context, gzip, "stardict_dict_");
                             }
                             Log.d(TAG, "Extracted .dict.dz to temp file: " + tempDictFile.getPath());
                         } else if (name.endsWith(".dict")) {
-                            // Stream the plain dict to a temp file.
                             NonClosingInputStream nonClosingStream = new NonClosingInputStream(zis);
                             tempDictFile = extractToTempFile(context, nonClosingStream, "stardict_dict_");
                             Log.d(TAG, "Extracted .dict to temp file: " + tempDictFile.getPath());
@@ -614,6 +755,58 @@ public final class StarDictDictionary implements Dictionary {
         int n;
         while ((n = is.read(buf)) != -1) out.write(buf, 0, n);
         return out.toByteArray();
+    }
+
+    /**
+     * Copies all bytes from {@code in} to {@code outFile}, creating or
+     * overwriting the file.  Partial output is deleted on error.
+     */
+    private static void copyStreamToFile(@NonNull InputStream in,
+                                          @NonNull File outFile) throws IOException {
+        try (FileOutputStream out = new FileOutputStream(outFile)) {
+            byte[] buf = new byte[COPY_BUFFER_SIZE];
+            int n;
+            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+        } catch (IOException e) {
+            deleteSilently(outFile);
+            throw e;
+        }
+    }
+
+    /** Returns the first {@code .ifo} file found in {@code dir}, or {@code null}. */
+    @Nullable
+    private static File findIfoFile(@NonNull File dir) {
+        if (!dir.isDirectory()) return null;
+        File[] files = dir.listFiles();
+        if (files == null) return null;
+        for (File f : files) {
+            if (f.getName().endsWith(".ifo")) return f;
+        }
+        return null;
+    }
+
+    /**
+     * Reads and parses a {@code .ifo} file from disk, returning the key/value
+     * tag pairs it contains.
+     */
+    @NonNull
+    private static Map<String, String> readIfoFile(@NonNull File ifoFile) throws IOException {
+        Map<String, String> tags = new HashMap<>();
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(new FileInputStream(ifoFile), StandardCharsets.UTF_8))) {
+            String magic = br.readLine();
+            if (!"StarDict's dict ifo file".equals(magic)) {
+                throw new IOException("Not a StarDict .ifo file: " + ifoFile);
+            }
+            String line;
+            while ((line = br.readLine()) != null) {
+                int eq = line.indexOf('=');
+                if (eq > 0) {
+                    tags.put(line.substring(0, eq).trim(), line.substring(eq + 1).trim());
+                }
+            }
+        }
+        return tags;
     }
 
     /**
