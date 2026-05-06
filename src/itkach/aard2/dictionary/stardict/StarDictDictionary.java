@@ -282,16 +282,14 @@ public final class StarDictDictionary implements Dictionary {
                         if (name.endsWith(".ifo") || name.endsWith(".idx")) {
                             copyStreamToFile(zis, outFile);
                         } else if (name.endsWith(".idx.gz")) {
-                            // Decompress .gz suffix: "foo.idx.gz" → "foo.idx"
-                            // (strip last 3 chars: .gz = 3 chars)
+                            // Decompress on-the-fly: "foo.idx.gz" → "foo.idx"
                             File out = new File(outDir, name.substring(0, name.length() - 3));
                             NonClosingInputStream ncs = new NonClosingInputStream(zis);
                             try (GZIPInputStream gzip = new GZIPInputStream(ncs)) {
                                 copyStreamToFile(gzip, out);
                             }
                         } else if (name.endsWith(".dict.dz")) {
-                            // Decompress .dz suffix: "foo.dict.dz" → "foo.dict"
-                            // (strip last 3 chars: .dz = 3 chars)
+                            // Decompress on-the-fly: "foo.dict.dz" → "foo.dict"
                             File out = new File(outDir, name.substring(0, name.length() - 3));
                             NonClosingInputStream ncs = new NonClosingInputStream(zis);
                             try (GZIPInputStream gzip = new GZIPInputStream(ncs)) {
