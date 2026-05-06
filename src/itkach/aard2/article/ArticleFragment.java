@@ -23,6 +23,7 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import itkach.aard2.R;
 import itkach.aard2.SlobHelper;
+import itkach.aard2.prefs.AppPrefs;
 import itkach.aard2.prefs.ArticleViewPrefs;
 import itkach.aard2.utils.Utils;
 import itkach.aard2.widget.ArticleWebView;
@@ -48,6 +49,9 @@ public class ArticleFragment extends Fragment {
         menu.clear();
         inflater.inflate(R.menu.article, menu);
         bookmarkMenu = menu.findItem(R.id.action_bookmark_article);
+        if (AppPrefs.disableBookmarks()) {
+            bookmarkMenu.setVisible(false);
+        }
         stylesMenu = menu.findItem(R.id.action_select_style);
     }
 
