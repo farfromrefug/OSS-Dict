@@ -59,6 +59,8 @@ import itkach.slob.Slob;
  */
 public final class StarDictDictionary implements Dictionary {
     private static final String TAG = "StarDictDictionary";
+    /** Buffer size used when copying stream data to temp files (64 KiB). */
+    private static final int COPY_BUFFER_SIZE = 65536;
 
     // -----------------------------------------------------------------------
     // Metadata
@@ -228,15 +230,15 @@ public final class StarDictDictionary implements Dictionary {
                             // Decompress the gzip layer on the fly while writing to a temp file
                             // so that neither the compressed nor the decompressed data needs to
                             // be held in memory simultaneously.
-                            NonClosingInputStream ncStream = new NonClosingInputStream(zis);
-                            try (GZIPInputStream gzip = new GZIPInputStream(ncStream)) {
+                            NonClosingInputStream nonClosingStream = new NonClosingInputStream(zis);
+                            try (GZIPInputStream gzip = new GZIPInputStream(nonClosingStream)) {
                                 tempDictFile = extractToTempFile(context, gzip, "stardict_dict_");
                             }
                             Log.d(TAG, "Extracted .dict.dz to temp file: " + tempDictFile.getPath());
                         } else if (name.endsWith(".dict")) {
                             // Stream the plain dict to a temp file.
-                            NonClosingInputStream ncStream = new NonClosingInputStream(zis);
-                            tempDictFile = extractToTempFile(context, ncStream, "stardict_dict_");
+                            NonClosingInputStream nonClosingStream = new NonClosingInputStream(zis);
+                            tempDictFile = extractToTempFile(context, nonClosingStream, "stardict_dict_");
                             Log.d(TAG, "Extracted .dict to temp file: " + tempDictFile.getPath());
                         }
                     }
@@ -257,7 +259,7 @@ public final class StarDictDictionary implements Dictionary {
         }
 
         if (ifoData == null) {
-            if (tempDictFile != null) tempDictFile.delete();
+            deleteSilently(tempDictFile);
             throw new IOException("No .ifo file found in archive: " + archivePath);
         }
 
@@ -267,7 +269,7 @@ public final class StarDictDictionary implements Dictionary {
                 new InputStreamReader(new java.io.ByteArrayInputStream(ifoData), StandardCharsets.UTF_8))) {
             String magic = br.readLine();
             if (!"StarDict's dict ifo file".equals(magic)) {
-                if (tempDictFile != null) tempDictFile.delete();
+                deleteSilently(tempDictFile);
                 throw new IOException("Not a StarDict .ifo file in archive: " + archivePath);
             }
             String line;
@@ -298,7 +300,7 @@ public final class StarDictDictionary implements Dictionary {
         }
 
         if (idxData == null) {
-            if (tempDictFile != null) tempDictFile.delete();
+            deleteSilently(tempDictFile);
             throw new IOException("No .idx or .idx.gz file found in archive for: " + baseName);
         }
 
@@ -618,10 +620,9 @@ public final class StarDictDictionary implements Dictionary {
      * Copies all bytes from {@code in} into a new temporary file inside the
      * app's cache directory and returns a reference to that file.
      *
-     * <p>The file is created with {@link File#deleteOnExit()} so it will be
-     * removed when the application process exits.  Callers should also store
-     * a reference and delete the file explicitly when the dictionary is no
-     * longer needed.</p>
+     * <p>The caller is responsible for deleting the file when it is no longer
+     * needed (e.g. by calling {@link #deleteSilently(File)} in the owning
+     * dictionary's cleanup path, or by clearing the app's cache).</p>
      *
      * @param context Android context used to locate the cache directory
      * @param in      source stream; the caller is responsible for closing it
@@ -632,13 +633,22 @@ public final class StarDictDictionary implements Dictionary {
                                            @NonNull InputStream in,
                                            @NonNull String prefix) throws IOException {
         File tempFile = File.createTempFile(prefix, ".tmp", context.getCacheDir());
-        tempFile.deleteOnExit();
         try (FileOutputStream out = new FileOutputStream(tempFile)) {
-            byte[] buf = new byte[65536];
+            byte[] buf = new byte[COPY_BUFFER_SIZE];
             int n;
             while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+        } catch (IOException e) {
+            deleteSilently(tempFile);
+            throw e;
         }
         return tempFile;
+    }
+
+    /** Deletes {@code f} if it is non-null, logging a warning if deletion fails. */
+    private static void deleteSilently(@Nullable File f) {
+        if (f != null && !f.delete()) {
+            Log.w(TAG, "Could not delete temp dict file: " + f.getPath());
+        }
     }
 
     /**
@@ -649,7 +659,11 @@ public final class StarDictDictionary implements Dictionary {
      */
     private static final class NonClosingInputStream extends FilterInputStream {
         NonClosingInputStream(InputStream in) { super(in); }
-        @Override public void close() { /* intentionally do not close the wrapped stream */ }
+        @Override public void close() {
+            /* Intentionally do not close the wrapped stream. This prevents
+             * a GZIPInputStream from closing the parent ZipInputStream when
+             * decompressing nested .dict.dz entries from a ZIP archive. */
+        }
     }
 
     /**
