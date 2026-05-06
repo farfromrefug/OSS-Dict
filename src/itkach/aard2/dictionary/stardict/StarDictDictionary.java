@@ -244,7 +244,8 @@ public final class StarDictDictionary implements Dictionary {
             }
             extractArchiveToDir(context, archiveUri, extractDir);
             ifoFile = findIfoFile(extractDir);
-            // Invalidate any stale key cache so the next load re-parses the fresh .idx.
+            // Unconditionally delete any existing key cache so the next load
+            // re-parses the freshly extracted .idx rather than serving stale data.
             deleteSilently(keysCache);
         }
 
@@ -945,7 +946,12 @@ public final class StarDictDictionary implements Dictionary {
                                          @NonNull File idxFile,
                                          @NonNull StarDictDictionary dict) {
         File parent = cacheFile.getAbsoluteFile().getParentFile();
-        if (parent != null && !parent.isDirectory()) parent.mkdirs();
+        if (parent != null && !parent.isDirectory()) {
+            if (!parent.mkdirs() && !parent.isDirectory()) {
+                Log.w(TAG, "Could not create key cache directory: " + parent);
+                return;
+            }
+        }
         File tmp = new File(cacheFile.getParent(), cacheFile.getName() + ".tmp");
         try {
             try (DataOutputStream dos = new DataOutputStream(

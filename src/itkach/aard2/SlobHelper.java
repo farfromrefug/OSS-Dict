@@ -159,6 +159,10 @@ public final class SlobHelper {
 
         // Snapshot the descriptor list so that concurrent add/remove operations do not affect
         // our iteration (and so we hold no lock while calling the potentially-slow loadDictionary).
+        // Note: this snapshot is not synchronised on the list, which means a concurrent add()
+        // that completes just before the snapshot may or may not be visible.  That is acceptable
+        // because the observer that drove this call will fire again after the add(), causing
+        // another updateSlobs() that will include the new descriptor.
         final List<SlobDescriptor> snapshot = new ArrayList<>(dictionaries);
 
         // Load every dictionary outside the lock.  Each load can involve I/O (ZIP extraction,
@@ -170,7 +174,8 @@ public final class SlobHelper {
             try {
                 dict = sd.loadDictionary(application);
             } catch (Exception e) {
-                Log.e(TAG, "Unexpected error loading dictionary: " + sd.path, e);
+                Log.e(TAG, "Unexpected error loading dictionary: "
+                        + (sd.path != null ? sd.path : sd.id), e);
             }
             if (dict != null) {
                 if (!origId.equals(sd.id)) {
