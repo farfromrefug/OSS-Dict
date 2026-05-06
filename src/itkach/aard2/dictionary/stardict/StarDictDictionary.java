@@ -9,8 +9,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.documentfile.provider.DocumentFile;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -61,6 +65,17 @@ public final class StarDictDictionary implements Dictionary {
     private static final String TAG = "StarDictDictionary";
     /** Buffer size used when copying stream data to temp files (64 KiB). */
     private static final int COPY_BUFFER_SIZE = 65536;
+
+    // -----------------------------------------------------------------------
+    // Key-index cache constants
+    // -----------------------------------------------------------------------
+    /** Magic header that identifies a StarDict key-index cache file. */
+    private static final byte[] KEYS_CACHE_MAGIC =
+            new byte[]{'S', 'D', 'K', 'E', 'Y', 'S', '\n', '\0'};
+    /** Increment this whenever the cache binary format changes to auto-invalidate old files. */
+    private static final int KEYS_CACHE_VERSION = 1;
+    /** I/O buffer size for cache read/write (64 KiB). */
+    private static final int KEYS_CACHE_BUFFER_SIZE = 65536;
 
     // -----------------------------------------------------------------------
     // Metadata
@@ -212,6 +227,8 @@ public final class StarDictDictionary implements Dictionary {
         File baseDir = new File(context.getFilesDir(), "dicts/stardict");
         String dirName = Long.toHexString(stableHash64(archivePath) & Long.MAX_VALUE);
         File extractDir = new File(baseDir, dirName);
+        // Key-index cache lives as a sibling file next to the extracted directory.
+        File keysCache = new File(baseDir, dirName + ".keys");
 
         // Fast path: already extracted on a previous run.
         File ifoFile = findIfoFile(extractDir);
@@ -227,6 +244,8 @@ public final class StarDictDictionary implements Dictionary {
             }
             extractArchiveToDir(context, archiveUri, extractDir);
             ifoFile = findIfoFile(extractDir);
+            // Invalidate any stale key cache so the next load re-parses the fresh .idx.
+            deleteSilently(keysCache);
         }
 
         if (ifoFile == null) {
@@ -237,7 +256,7 @@ public final class StarDictDictionary implements Dictionary {
         }
 
         Log.d(TAG, "Loading extracted StarDict from " + ifoFile.getPath());
-        return fromExtractedDir(extractDir, ifoFile, archivePath);
+        return fromExtractedDir(extractDir, ifoFile, archivePath, keysCache);
     }
 
     /**
@@ -309,26 +328,25 @@ public final class StarDictDictionary implements Dictionary {
      * Loads a StarDict dictionary from an already-extracted directory of plain
      * (uncompressed) StarDict files.  The {@code .dict} file is opened with a
      * seekable {@link FileChannel} so entry content is fetched lazily.
+     *
+     * <p>When {@code keysCache} is non-null the method first checks whether a
+     * valid key-index cache exists on disk.  On a cache hit the expensive
+     * {@code .idx} parse and QUATERNARY sort are skipped entirely.  On a cache
+     * miss the parse runs as normal and the result is written to the cache for
+     * the next launch.</p>
      */
     @NonNull
     private static StarDictDictionary fromExtractedDir(@NonNull File extractDir,
                                                          @NonNull File ifoFile,
-                                                         @NonNull String archivePath)
+                                                         @NonNull String archivePath,
+                                                         @Nullable File keysCache)
             throws IOException {
-        // Parse the .ifo file directly (no ContentResolver needed for local files)
-        Map<String, String> ifoTags = readIfoFile(ifoFile);
-
         String baseName = ifoFile.getName();
         baseName = baseName.substring(0, baseName.length() - 4); // strip .ifo
 
-        // Read the .idx file into memory (small, needed for search)
         File idxFile = new File(extractDir, baseName + ".idx");
         if (!idxFile.exists()) {
             throw new IOException("Missing .idx after extraction: " + idxFile);
-        }
-        byte[] idxData;
-        try (FileInputStream fis = new FileInputStream(idxFile)) {
-            idxData = readAll(fis);
         }
 
         // Open the .dict file with a seekable FileChannel
@@ -345,8 +363,29 @@ public final class StarDictDictionary implements Dictionary {
                 ? archivePath.substring(0, archivePath.length() - 4)
                 : archivePath;
 
+        // ── Try to load the sorted key index from disk cache ─────────────────
+        if (keysCache != null) {
+            StarDictDictionary cached = tryLoadKeysFromCache(keysCache, idxFile, basePath, dictChannel);
+            if (cached != null) {
+                cached.dictFis = dictFis;
+                return cached;
+            }
+        }
+
+        // ── Cache miss: parse the .idx and sort (may be slow for large dicts) ─
+        Map<String, String> ifoTags = readIfoFile(ifoFile);
+        byte[] idxData;
+        try (FileInputStream fis = new FileInputStream(idxFile)) {
+            idxData = readAll(fis);
+        }
+
         StarDictDictionary result = parse(ifoTags, idxData, dictChannel, null, basePath);
         result.dictFis = dictFis;
+
+        // ── Persist the sorted key index so the next load is fast ────────────
+        if (keysCache != null) {
+            saveKeysToCache(keysCache, idxFile, result);
+        }
         return result;
     }
 
@@ -827,6 +866,117 @@ public final class StarDictDictionary implements Dictionary {
             }
         }
         return tags;
+    }
+
+    // -----------------------------------------------------------------------
+    // Key-index cache helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * Attempts to deserialize the sorted key index from a previously saved cache file.
+     *
+     * <p>The cache is validated against the current {@code .idx} file size.  Any mismatch
+     * (stale cache, truncated write, format version change) causes a {@code null} return so
+     * the caller falls back to full parsing.</p>
+     *
+     * @param cacheFile the cache file to read from
+     * @param idxFile   the live {@code .idx} file – used for the fingerprint check
+     * @param basePath  the dictionary's base path (used when constructing the instance)
+     * @param dictChannel open {@link FileChannel} for the {@code .dict} file
+     * @return a ready-to-use {@link StarDictDictionary}, or {@code null} on cache miss/error
+     */
+    @Nullable
+    private static StarDictDictionary tryLoadKeysFromCache(@NonNull File cacheFile,
+                                                             @NonNull File idxFile,
+                                                             @NonNull String basePath,
+                                                             @NonNull FileChannel dictChannel) {
+        if (!cacheFile.exists()) return null;
+        try (DataInputStream dis = new DataInputStream(
+                new BufferedInputStream(new FileInputStream(cacheFile), KEYS_CACHE_BUFFER_SIZE))) {
+            // Validate magic
+            byte[] magic = new byte[KEYS_CACHE_MAGIC.length];
+            dis.readFully(magic);
+            if (!Arrays.equals(magic, KEYS_CACHE_MAGIC)) {
+                Log.w(TAG, "Key cache magic mismatch: " + cacheFile);
+                return null;
+            }
+            // Validate version
+            if ((dis.readByte() & 0xFF) != KEYS_CACHE_VERSION) {
+                Log.d(TAG, "Key cache version mismatch: " + cacheFile);
+                return null;
+            }
+            // Validate fingerprint (idx file size)
+            long cachedIdxSize = dis.readLong();
+            if (cachedIdxSize != idxFile.length()) {
+                Log.d(TAG, "Key cache stale (idx size changed): " + cacheFile);
+                return null;
+            }
+            // Read id and tags
+            String id = dis.readUTF();
+            int tagCount = dis.readShort() & 0xFFFF;
+            Map<String, String> tags = new HashMap<>(tagCount);
+            for (int i = 0; i < tagCount; i++) {
+                tags.put(dis.readUTF(), dis.readUTF());
+            }
+            long wordCount = dis.readLong();
+            // Read sorted keys, offsets, sizes
+            int keyCount = dis.readInt();
+            List<String> keys = new ArrayList<>(keyCount);
+            for (int i = 0; i < keyCount; i++) keys.add(dis.readUTF());
+            int[] offsets = new int[keyCount];
+            int[] sizes   = new int[keyCount];
+            for (int i = 0; i < keyCount; i++) offsets[i] = dis.readInt();
+            for (int i = 0; i < keyCount; i++) sizes[i]   = dis.readInt();
+
+            Log.d(TAG, "Loaded key cache for " + basePath + " (" + keyCount + " keys)");
+            return new StarDictDictionary(id, basePath, tags, wordCount,
+                    keys, offsets, sizes, dictChannel, null);
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to read key cache " + cacheFile + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Serializes the sorted key index of {@code dict} to {@code cacheFile} using an atomic
+     * write (temp-file + rename) so that a crash during the write cannot leave a corrupt cache.
+     */
+    private static void saveKeysToCache(@NonNull File cacheFile,
+                                         @NonNull File idxFile,
+                                         @NonNull StarDictDictionary dict) {
+        File parent = cacheFile.getAbsoluteFile().getParentFile();
+        if (parent != null && !parent.isDirectory()) parent.mkdirs();
+        File tmp = new File(cacheFile.getParent(), cacheFile.getName() + ".tmp");
+        try {
+            try (DataOutputStream dos = new DataOutputStream(
+                    new BufferedOutputStream(new FileOutputStream(tmp), KEYS_CACHE_BUFFER_SIZE))) {
+                dos.write(KEYS_CACHE_MAGIC);
+                dos.writeByte(KEYS_CACHE_VERSION);
+                dos.writeLong(idxFile.length());          // fingerprint
+                dos.writeUTF(dict.id);
+                Map<String, String> tags = dict.tags;     // unmodifiable view
+                dos.writeShort(tags.size());
+                for (Map.Entry<String, String> e : tags.entrySet()) {
+                    dos.writeUTF(e.getKey());
+                    dos.writeUTF(e.getValue());
+                }
+                dos.writeLong(dict.wordCount);
+                dos.writeInt(dict.keys.size());
+                for (String k : dict.keys)   dos.writeUTF(k);
+                for (int off : dict.offsets) dos.writeInt(off);
+                for (int sz  : dict.sizes)   dos.writeInt(sz);
+            }
+            if (!tmp.renameTo(cacheFile)) {
+                Log.w(TAG, "Could not rename key cache tmp file to " + cacheFile);
+                deleteSilently(tmp);
+            } else {
+                Log.d(TAG, "Saved key cache for " + dict.basePath
+                        + " (" + dict.keys.size() + " keys)");
+            }
+        } catch (IOException e) {
+            Log.w(TAG, "Failed to write key cache " + cacheFile + ": " + e.getMessage());
+            deleteSilently(tmp);
+        }
     }
 
     /**

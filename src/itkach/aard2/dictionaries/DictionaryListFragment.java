@@ -20,6 +20,7 @@ import android.text.Spanned;
 import androidx.core.text.HtmlCompat;
 import android.widget.TextView;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.snackbar.Snackbar;
 
 import itkach.aard2.BaseListFragment;
 import itkach.aard2.MainActivity;
@@ -30,6 +31,7 @@ import itkach.aard2.descriptor.SlobDescriptor;
 public class DictionaryListFragment extends BaseListFragment {
     private final static String TAG = DictionaryListFragment.class.getSimpleName();
     private TextView formatsHeader;
+    @Nullable private Snackbar loadingSnackbar;
 
     private DictionaryListViewModel viewModel;
     private final ActivityResultLauncher<Intent> dictionarySelector = registerForActivityResult(
@@ -109,6 +111,24 @@ public class DictionaryListFragment extends BaseListFragment {
             @Override
             public void onItemRangeRemoved(int positionStart, int itemCount) {
                 updateFormatsHeaderVisibility(listAdapter);
+            }
+        });
+
+        // Show a SnackBar while dictionaries are being loaded / extracted so the
+        // user knows background work is in progress.
+        viewModel.isLoading.observe(getViewLifecycleOwner(), loading -> {
+            if (Boolean.TRUE.equals(loading)) {
+                if (loadingSnackbar == null || !loadingSnackbar.isShown()) {
+                    loadingSnackbar = Snackbar.make(view,
+                            R.string.msg_loading_dictionary,
+                            Snackbar.LENGTH_INDEFINITE);
+                    loadingSnackbar.show();
+                }
+            } else {
+                if (loadingSnackbar != null) {
+                    loadingSnackbar.dismiss();
+                    loadingSnackbar = null;
+                }
             }
         });
     }

@@ -8,10 +8,12 @@ import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.AndroidViewModel;
+import androidx.lifecycle.MutableLiveData;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import itkach.aard2.descriptor.BlobDescriptor;
 import itkach.aard2.BlobDescriptorList;
@@ -23,6 +25,16 @@ import itkach.aard2.utils.ThreadUtils;
 public class DictionaryListViewModel extends AndroidViewModel {
     @Nullable
     private SlobDescriptor dictionaryToBeReplaced;
+
+    /**
+     * Emits {@code true} while one or more dictionaries are being loaded / extracted,
+     * {@code false} once all pending loads have completed.  Observe this from the UI to
+     * show/hide a progress SnackBar.
+     */
+    public final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+
+    /** Counts in-flight dictionary loads so we only emit false once all complete. */
+    private final AtomicInteger loadingCount = new AtomicInteger(0);
 
     public DictionaryListViewModel(@NonNull Application application) {
         super(application);
@@ -48,13 +60,25 @@ public class DictionaryListViewModel extends AndroidViewModel {
                     selection.add(uri);
                 }
             }
+            if (selection.isEmpty()) return;
+
+            // Signal that loading has started (before any blocking I/O begins).
+            loadingCount.addAndGet(selection.size());
+            isLoading.postValue(true);
+
             for (Uri uri : selection) {
-                getApplication().getContentResolver().takePersistableUriPermission(uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                SlobDescriptor sd = SlobDescriptor.fromUri(getApplication(), uri);
-                SlobDescriptorList dictionaries = SlobHelper.getInstance().dictionaries;
-                if (!dictionaries.hasId(sd.id)) {
-                    dictionaries.add(sd);
+                try {
+                    getApplication().getContentResolver().takePersistableUriPermission(uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    SlobDescriptor sd = SlobDescriptor.fromUri(getApplication(), uri);
+                    SlobDescriptorList dictionaries = SlobHelper.getInstance().dictionaries;
+                    if (!dictionaries.hasId(sd.id)) {
+                        dictionaries.add(sd);
+                    }
+                } finally {
+                    if (loadingCount.decrementAndGet() == 0) {
+                        isLoading.postValue(false);
+                    }
                 }
             }
         });

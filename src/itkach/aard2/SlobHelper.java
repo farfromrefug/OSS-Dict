@@ -148,34 +148,57 @@ public final class SlobHelper {
     /**
      * Rebuilds the internal dictionary maps from the current {@link #dictionaries} descriptor list.
      * Called whenever the list of dictionaries changes.
+     *
+     * <p>All {@link itkach.aard2.descriptor.SlobDescriptor#loadDictionary(Context)} calls happen
+     * <em>outside</em> {@code dictsLock} so that ongoing search queries are never blocked by
+     * slow I/O (ZIP extraction, key-block decompression, etc.).  Only the final map swap is
+     * performed inside the lock.</p>
      */
     public void updateSlobs() {
         checkInitialized();
+
+        // Snapshot the descriptor list so that concurrent add/remove operations do not affect
+        // our iteration (and so we hold no lock while calling the potentially-slow loadDictionary).
+        final List<SlobDescriptor> snapshot = new ArrayList<>(dictionaries);
+
+        // Load every dictionary outside the lock.  Each load can involve I/O (ZIP extraction,
+        // index parsing, FileChannel open), so we must not hold dictsLock here.
+        final List<Dictionary> validDicts = new ArrayList<>(snapshot.size());
+        for (SlobDescriptor sd : snapshot) {
+            final String origId = sd.id;
+            Dictionary dict = null;
+            try {
+                dict = sd.loadDictionary(application);
+            } catch (Exception e) {
+                Log.e(TAG, "Unexpected error loading dictionary: " + sd.path, e);
+            }
+            if (dict != null) {
+                if (!origId.equals(sd.id)) {
+                    Log.d(TAG, String.format("%s replaced: updating store %s -> %s",
+                            sd.path, origId, sd.id));
+                    dictStore.delete(origId);
+                    dictStore.save(sd);
+                }
+                validDicts.add(dict);
+            }
+        }
+
+        // Atomically swap the maps inside the lock so search queries always see a consistent view.
         synchronized (dictsLock) {
             dictList.clear();
             dictMap.clear();
             slobs.clear();
             slobMap.clear();
 
-            for (SlobDescriptor sd : dictionaries) {
-                String origId = sd.id;
-                Dictionary dict = sd.loadDictionary(application);
-                if (dict != null) {
-                    if (!origId.equals(sd.id)) {
-                        Log.d(TAG, String.format("%s replaced: updating store %s -> %s",
-                                sd.path, origId, sd.id));
-                        dictStore.delete(origId);
-                        dictStore.save(sd);
-                    }
-                    dictList.add(dict);
-                    dictMap.put(dict.getId(), dict);
+            for (Dictionary dict : validDicts) {
+                dictList.add(dict);
+                dictMap.put(dict.getId(), dict);
 
-                    // Keep parallel Slob tracking for backward-compatible search
-                    if (dict instanceof SlobDictionary) {
-                        Slob s = ((SlobDictionary) dict).getSlob();
-                        slobs.add(s);
-                        slobMap.put(s.getId().toString(), s);
-                    }
+                // Keep parallel Slob tracking for backward-compatible search
+                if (dict instanceof SlobDictionary) {
+                    Slob s = ((SlobDictionary) dict).getSlob();
+                    slobs.add(s);
+                    slobMap.put(s.getId().toString(), s);
                 }
             }
         }
