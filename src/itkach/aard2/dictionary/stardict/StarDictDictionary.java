@@ -2,6 +2,7 @@ package itkach.aard2.dictionary.stardict;
 
 import android.content.Context;
 import android.net.Uri;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -10,7 +11,10 @@ import androidx.documentfile.provider.DocumentFile;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -76,6 +80,17 @@ public final class StarDictDictionary implements Dictionary {
     // -----------------------------------------------------------------------
     @Nullable private final FileChannel dictChannel;  // null if using .dict.dz
     @Nullable private final byte[] dictDzData;        // full decompressed content if .dict.dz
+
+    // -----------------------------------------------------------------------
+    // Resource lifetime management (fromIfoUri / fromArchiveUri paths)
+    // -----------------------------------------------------------------------
+    // These references prevent the underlying file descriptor or temp file from
+    // being closed / deleted prematurely by the garbage collector.
+    @SuppressWarnings("FieldCanBeLocal")
+    @Nullable private FileInputStream dictFis;        // keeps dictChannel alive
+    @SuppressWarnings("FieldCanBeLocal")
+    @Nullable private ParcelFileDescriptor dictPfd;   // keeps dictFis alive for SAF URIs
+    @Nullable private File tempDictFile;              // non-null when we own a temp file
 
     // -----------------------------------------------------------------------
     // Construction
@@ -164,12 +179,16 @@ public final class StarDictDictionary implements Dictionary {
     }
 
     /**
-     * Opens a StarDict dictionary from a compressed archive (ZIP or GZ).
+     * Opens a StarDict dictionary from a compressed archive (ZIP).
      * The archive must contain .ifo, .idx (or .idx.gz), and .dict (or .dict.dz) files
      * with the same base name.
      *
+     * <p>The .ifo and .idx files are read into memory (they are small). The .dict
+     * content is streamed directly to a temporary file in the app's cache directory
+     * so that the entire dictionary body is never held in RAM.</p>
+     *
      * @param context Android context for content resolver
-     * @param archiveUri URI of the archive file (.zip, .gz, or .tgz)
+     * @param archiveUri URI of the archive file (.zip)
      * @param archivePath Display path of the archive
      * @return StarDictDictionary loaded from the archive
      * @throws IOException if files cannot be read or required files are missing
@@ -178,60 +197,77 @@ public final class StarDictDictionary implements Dictionary {
     public static StarDictDictionary fromArchiveUri(@NonNull Context context,
                                                       @NonNull Uri archiveUri,
                                                       @NonNull String archivePath) throws IOException {
-        Map<String, byte[]> archiveFiles = new HashMap<>();
-        
+        // Small files (.ifo, .idx, .idx.gz) are held in memory.
+        // The .dict or .dict.dz content is streamed to a temp file to avoid
+        // loading the entire dictionary body into RAM.
+        Map<String, byte[]> smallFiles = new HashMap<>();
+        File tempDictFile = null;
+
         try (InputStream is = context.getContentResolver().openInputStream(archiveUri)) {
             if (is == null) {
                 throw new IOException("Cannot open archive: " + archivePath);
             }
-            
-            // Assume ZIP format (.zip)
+
             try (ZipInputStream zis = new ZipInputStream(is)) {
                 ZipEntry entry;
                 while ((entry = zis.getNextEntry()) != null) {
                     if (!entry.isDirectory()) {
                         String name = entry.getName();
-                        // Extract just the filename, not the full path
+                        // Strip any directory prefix – we only care about the leaf name.
                         int lastSlash = name.lastIndexOf('/');
                         if (lastSlash >= 0) {
                             name = name.substring(lastSlash + 1);
                         }
-                        
-                        // Only store relevant StarDict files
-                        if (name.endsWith(".ifo") || name.endsWith(".idx") || 
-                            name.endsWith(".idx.gz") || name.endsWith(".dict") ||
-                            name.endsWith(".dict.dz")) {
+
+                        if (name.endsWith(".ifo") || name.endsWith(".idx")
+                                || name.endsWith(".idx.gz")) {
                             byte[] data = readAll(zis);
-                            archiveFiles.put(name, data);
-                            Log.d(TAG, "Extracted from archive: " + name + " (" + data.length + " bytes)");
+                            smallFiles.put(name, data);
+                            Log.d(TAG, "Read into memory: " + name + " (" + data.length + " bytes)");
+                        } else if (name.endsWith(".dict.dz")) {
+                            // Decompress the gzip layer on the fly while writing to a temp file
+                            // so that neither the compressed nor the decompressed data needs to
+                            // be held in memory simultaneously.
+                            NonClosingInputStream ncStream = new NonClosingInputStream(zis);
+                            try (GZIPInputStream gzip = new GZIPInputStream(ncStream)) {
+                                tempDictFile = extractToTempFile(context, gzip, "stardict_dict_");
+                            }
+                            Log.d(TAG, "Extracted .dict.dz to temp file: " + tempDictFile.getPath());
+                        } else if (name.endsWith(".dict")) {
+                            // Stream the plain dict to a temp file.
+                            NonClosingInputStream ncStream = new NonClosingInputStream(zis);
+                            tempDictFile = extractToTempFile(context, ncStream, "stardict_dict_");
+                            Log.d(TAG, "Extracted .dict to temp file: " + tempDictFile.getPath());
                         }
                     }
                     zis.closeEntry();
                 }
             }
         }
-        
+
         // Find the .ifo file
         String ifoFileName = null;
         byte[] ifoData = null;
-        for (Map.Entry<String, byte[]> entry : archiveFiles.entrySet()) {
+        for (Map.Entry<String, byte[]> entry : smallFiles.entrySet()) {
             if (entry.getKey().endsWith(".ifo")) {
                 ifoFileName = entry.getKey();
                 ifoData = entry.getValue();
                 break;
             }
         }
-        
+
         if (ifoData == null) {
+            if (tempDictFile != null) tempDictFile.delete();
             throw new IOException("No .ifo file found in archive: " + archivePath);
         }
-        
+
         // Parse .ifo content
         Map<String, String> ifoTags = new HashMap<>();
         try (BufferedReader br = new BufferedReader(
                 new InputStreamReader(new java.io.ByteArrayInputStream(ifoData), StandardCharsets.UTF_8))) {
             String magic = br.readLine();
             if (!"StarDict's dict ifo file".equals(magic)) {
+                if (tempDictFile != null) tempDictFile.delete();
                 throw new IOException("Not a StarDict .ifo file in archive: " + archivePath);
             }
             String line;
@@ -242,51 +278,42 @@ public final class StarDictDictionary implements Dictionary {
                 }
             }
         }
-        
+
         // Get base name (without .ifo extension)
         String baseName = ifoFileName.substring(0, ifoFileName.length() - 4);
-        
-        // Find and decompress index file
+
+        // Find and decompress index file (kept in memory – it is much smaller than the dict)
         byte[] idxData = null;
         String idxGzName = baseName + ".idx.gz";
         String idxName = baseName + ".idx";
-        
-        if (archiveFiles.containsKey(idxGzName)) {
-            byte[] compressedIdx = archiveFiles.get(idxGzName);
+
+        if (smallFiles.containsKey(idxGzName)) {
+            byte[] compressedIdx = smallFiles.get(idxGzName);
             try (GZIPInputStream gzip = new GZIPInputStream(
                     new java.io.ByteArrayInputStream(compressedIdx))) {
                 idxData = readAll(gzip);
             }
-        } else if (archiveFiles.containsKey(idxName)) {
-            idxData = archiveFiles.get(idxName);
+        } else if (smallFiles.containsKey(idxName)) {
+            idxData = smallFiles.get(idxName);
         }
-        
+
         if (idxData == null) {
+            if (tempDictFile != null) tempDictFile.delete();
             throw new IOException("No .idx or .idx.gz file found in archive for: " + baseName);
         }
-        
-        // Find and potentially decompress dict file
-        byte[] dictData = null;
-        String dictDzName = baseName + ".dict.dz";
-        String dictName = baseName + ".dict";
-        
-        if (archiveFiles.containsKey(dictDzName)) {
-            byte[] compressedDict = archiveFiles.get(dictDzName);
-            try (GZIPInputStream gzip = new GZIPInputStream(
-                    new java.io.ByteArrayInputStream(compressedDict))) {
-                dictData = readAll(gzip);
-            }
-        } else if (archiveFiles.containsKey(dictName)) {
-            dictData = archiveFiles.get(dictName);
-        }
-        
-        if (dictData == null) {
+
+        if (tempDictFile == null) {
             throw new IOException("No .dict or .dict.dz file found in archive for: " + baseName);
         }
-        
-        // Create dictionary from in-memory data
-        // Since we have everything in memory, pass null for dictChannel
-        return parse(ifoTags, idxData, null, dictData, archivePath);
+
+        // Open a FileChannel to the temp file for lazy random-access reads.
+        FileInputStream dictFis = new FileInputStream(tempDictFile);
+        FileChannel dictChannel = dictFis.getChannel();
+
+        StarDictDictionary result = parse(ifoTags, idxData, dictChannel, null, archivePath);
+        result.dictFis      = dictFis;
+        result.tempDictFile = tempDictFile;
+        return result;
     }
 
     /**
@@ -342,28 +369,55 @@ public final class StarDictDictionary implements Dictionary {
         }
 
         // ── .dict or .dict.dz ─────────────────────────────────────────────
-        // Try .dict.dz first (gzip-compressed), then fall back to plain .dict
+        // Try .dict.dz first (gzip-compressed), then fall back to plain .dict.
+        // Neither the compressed bytes nor the decompressed bytes are held in
+        // memory: .dict.dz is decompressed to a temp file; plain .dict is opened
+        // via a seekable FileChannel so only individual entries are read on demand.
         Uri dictUri = findCompanionFile(context, ifoUri, ifoPath, new String[]{".dict.dz", ".dict"});
         FileChannel dictChannel = null;
-        byte[] dictDzData = null;
+        FileInputStream dictFis = null;
+        ParcelFileDescriptor dictPfd = null;
+        File tempDictFile = null;
 
         if (dictUri != null) {
             try {
-                InputStream is = context.getContentResolver().openInputStream(dictUri);
                 if (dictUri.toString().endsWith(".dz") || dictUri.toString().endsWith(".gz")) {
-                    // Compressed dict file - decompress into memory
-                    try (GZIPInputStream gzip = new GZIPInputStream(is)) {
-                        dictDzData = readAll(gzip);
+                    // Compressed .dict.dz: decompress to a temp file so individual
+                    // entries can be fetched with random seeks, without keeping the
+                    // decompressed content in RAM.
+                    try (InputStream rawIs = context.getContentResolver().openInputStream(dictUri);
+                         GZIPInputStream gzip = new GZIPInputStream(rawIs)) {
+                        tempDictFile = extractToTempFile(context, gzip, "stardict_dictdz_");
                     }
+                    dictFis = new FileInputStream(tempDictFile);
+                    dictChannel = dictFis.getChannel();
                 } else {
-                    // Uncompressed dict file - use FileChannel for efficiency
+                    // Uncompressed .dict: try to obtain a seekable FileChannel.
+                    InputStream is = context.getContentResolver().openInputStream(dictUri);
                     if (is instanceof FileInputStream) {
-                        dictChannel = ((FileInputStream) is).getChannel();
+                        dictFis = (FileInputStream) is;
+                        dictChannel = dictFis.getChannel();
                     } else {
-                        // For SAF URIs, we might not get a FileInputStream
-                        // Fall back to reading into memory
-                        dictDzData = readAll(is);
+                        // SAF content:// URI – openInputStream does not return a
+                        // FileInputStream, but openFileDescriptor gives a real fd.
                         is.close();
+                        try {
+                            dictPfd = context.getContentResolver().openFileDescriptor(dictUri, "r");
+                            if (dictPfd != null) {
+                                dictFis = new FileInputStream(dictPfd.getFileDescriptor());
+                                dictChannel = dictFis.getChannel();
+                            }
+                        } catch (Exception e2) {
+                            Log.w(TAG, "openFileDescriptor failed for " + basePath + ", copying to temp file", e2);
+                        }
+                        if (dictChannel == null) {
+                            // Last resort: copy the dict to a temp file.
+                            try (InputStream is2 = context.getContentResolver().openInputStream(dictUri)) {
+                                tempDictFile = extractToTempFile(context, is2, "stardict_dict_");
+                            }
+                            dictFis = new FileInputStream(tempDictFile);
+                            dictChannel = dictFis.getChannel();
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -371,7 +425,11 @@ public final class StarDictDictionary implements Dictionary {
             }
         }
 
-        return parse(ifoTags, idxData, dictChannel, dictDzData, basePath);
+        StarDictDictionary result = parse(ifoTags, idxData, dictChannel, null, basePath);
+        result.dictFis      = dictFis;
+        result.dictPfd      = dictPfd;
+        result.tempDictFile = tempDictFile;
+        return result;
     }
 
     // -----------------------------------------------------------------------
@@ -554,6 +612,44 @@ public final class StarDictDictionary implements Dictionary {
         int n;
         while ((n = is.read(buf)) != -1) out.write(buf, 0, n);
         return out.toByteArray();
+    }
+
+    /**
+     * Copies all bytes from {@code in} into a new temporary file inside the
+     * app's cache directory and returns a reference to that file.
+     *
+     * <p>The file is created with {@link File#deleteOnExit()} so it will be
+     * removed when the application process exits.  Callers should also store
+     * a reference and delete the file explicitly when the dictionary is no
+     * longer needed.</p>
+     *
+     * @param context Android context used to locate the cache directory
+     * @param in      source stream; the caller is responsible for closing it
+     * @param prefix  prefix for the temp-file name
+     */
+    @NonNull
+    private static File extractToTempFile(@NonNull Context context,
+                                           @NonNull InputStream in,
+                                           @NonNull String prefix) throws IOException {
+        File tempFile = File.createTempFile(prefix, ".tmp", context.getCacheDir());
+        tempFile.deleteOnExit();
+        try (FileOutputStream out = new FileOutputStream(tempFile)) {
+            byte[] buf = new byte[65536];
+            int n;
+            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+        }
+        return tempFile;
+    }
+
+    /**
+     * Wraps an {@link InputStream} so that {@link #close()} does <em>not</em>
+     * propagate to the underlying stream.  This is required when we wrap a
+     * {@link ZipInputStream} entry with a {@link GZIPInputStream}: closing
+     * the GZIPInputStream must not close the ZipInputStream itself.
+     */
+    private static final class NonClosingInputStream extends FilterInputStream {
+        NonClosingInputStream(InputStream in) { super(in); }
+        @Override public void close() { /* intentionally do not close the wrapped stream */ }
     }
 
     /**
