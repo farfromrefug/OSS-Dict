@@ -8,7 +8,13 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -51,6 +57,17 @@ public final class MDictDictionary implements Dictionary {
     private static final int COMP_NONE = 0;
     private static final int COMP_LZO  = 1;
     private static final int COMP_ZLIB = 2;
+
+    // -----------------------------------------------------------------------
+    // Index cache constants
+    // -----------------------------------------------------------------------
+    /** Magic header bytes for the binary index cache file. */
+    private static final byte[] CACHE_MAGIC =
+            new byte[]{'M', 'D', 'X', 'I', 'D', 'X', '\n', '\0'};
+    /** Increment when the cache format changes to invalidate old caches. */
+    private static final int CACHE_VERSION = 1;
+    /** Buffer size for cache I/O (64 KiB). */
+    private static final int CACHE_BUFFER_SIZE = 65536;
 
     // -----------------------------------------------------------------------
     // Persisted / derived state
@@ -139,6 +156,10 @@ public final class MDictDictionary implements Dictionary {
      * Opens an MDX file identified by a content {@link Uri} and parses its
      * key index into memory.  Record data is read lazily.
      *
+     * <p>On the first load the parsed key index is written to a small binary
+     * cache file in the app's files directory so that subsequent loads can
+     * skip the CPU-intensive key-block decompression and parsing step.</p>
+     *
      * @throws IOException if the file cannot be opened or is not a valid MDX.
      */
     @NonNull
@@ -149,7 +170,14 @@ public final class MDictDictionary implements Dictionary {
         if (pfd == null) throw new IOException("Cannot open: " + filePath);
         FileInputStream fis = new FileInputStream(pfd.getFileDescriptor());
         FileChannel channel = fis.getChannel();
-        MDictDictionary dict = parse(channel, filePath);
+
+        // Try the index cache first to skip slow key-block decompression.
+        File cache = cacheFile(context, filePath);
+        MDictDictionary dict = tryLoadFromCache(cache, channel, filePath);
+        if (dict == null) {
+            dict = parse(channel, filePath);
+            saveToCache(cache, dict);
+        }
         // Keep pfd and fis alive for the lifetime of the dictionary so that
         // the underlying file descriptor is not closed by GC finalizers.
         dict.pfd = pfd;
@@ -705,6 +733,194 @@ public final class MDictDictionary implements Dictionary {
         }
     }
 
+    // -----------------------------------------------------------------------
+    // Index cache helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * Returns the path of the index cache file for the given MDX file path.
+     * The cache is stored in a private sub-directory of
+     * {@code context.getFilesDir()} so it persists between restarts.
+     */
+    @NonNull
+    private static File cacheFile(@NonNull Context context, @NonNull String filePath) {
+        File cacheDir = new File(context.getFilesDir(), "dicts/mdict");
+        // Use a FNV-1a 64-bit hash for a stable, low-collision directory name.
+        long h = 0xcbf29ce484222325L;
+        for (int i = 0; i < filePath.length(); i++) {
+            h ^= filePath.charAt(i);
+            h *= 0x100000001b3L;
+        }
+        String name = Long.toHexString(h & Long.MAX_VALUE) + ".cache";
+        return new File(cacheDir, name);
+    }
+
+    /**
+     * Removes the persisted index cache that was created for this MDX file
+     * when it was first loaded.
+     *
+     * <p>Call this when the user removes / "forgets" the dictionary so that
+     * the app does not accumulate stale data in internal storage.</p>
+     *
+     * @param context  the application context
+     * @param filePath the URI / path string of the MDX file (same value
+     *                 that was passed to {@link #fromUri})
+     */
+    public static void cleanupPersistedData(@NonNull Context context,
+                                             @NonNull String filePath) {
+        File cache = cacheFile(context, filePath);
+        if (!cache.delete() && cache.exists()) {
+            Log.w(TAG, "Could not delete MDict index cache: " + cache);
+        }
+    }
+
+    /**
+     * Tries to construct an {@link MDictDictionary} from the on-disk index
+     * cache.  Returns {@code null} if the cache does not exist, has a stale
+     * fingerprint, or is corrupt in any way.
+     */
+    @Nullable
+    private static MDictDictionary tryLoadFromCache(@NonNull File cacheFile,
+                                                     @NonNull FileChannel channel,
+                                                     @NonNull String filePath) {
+        if (!cacheFile.exists()) return null;
+        try (DataInputStream dis = new DataInputStream(
+                new BufferedInputStream(new FileInputStream(cacheFile), CACHE_BUFFER_SIZE))) {
+
+            // Magic
+            byte[] magic = new byte[CACHE_MAGIC.length];
+            dis.readFully(magic);
+            if (!Arrays.equals(magic, CACHE_MAGIC)) return null;
+
+            // Version
+            if ((dis.readByte() & 0xFF) != CACHE_VERSION) return null;
+
+            // Fingerprint: MDX file size
+            long cachedSize = dis.readLong();
+            if (cachedSize != channel.size()) {
+                Log.d(TAG, "Index cache stale (size mismatch) for " + filePath);
+                return null;
+            }
+
+            // Tags
+            int tagCount = dis.readShort() & 0xFFFF;
+            Map<String, String> tags = new HashMap<>(tagCount);
+            for (int i = 0; i < tagCount; i++) {
+                tags.put(dis.readUTF(), dis.readUTF());
+            }
+
+            // id
+            String id = dis.readUTF();
+
+            // Keys + record offsets
+            int keyCount = dis.readInt();
+            List<String> keys = new ArrayList<>(keyCount);
+            long[] recordOffsets = new long[keyCount];
+            long[] sortedOffsets = new long[keyCount];
+            for (int i = 0; i < keyCount; i++) keys.add(dis.readUTF());
+            for (int i = 0; i < keyCount; i++) recordOffsets[i] = dis.readLong();
+            for (int i = 0; i < keyCount; i++) sortedOffsets[i] = dis.readLong();
+
+            // Record block info
+            int blockCount = dis.readInt();
+            List<long[]> recordBlockInfo = new ArrayList<>(blockCount);
+            for (int i = 0; i < blockCount; i++) {
+                recordBlockInfo.add(new long[]{
+                        dis.readLong(), // compSize
+                        dis.readLong(), // decompSize
+                        dis.readLong()  // fileOffset
+                });
+            }
+
+            // Start of record blocks in the file
+            long recordBlocksStart = dis.readLong();
+
+            Log.d(TAG, "Loaded index from cache for " + filePath
+                    + " (" + keyCount + " keys)");
+            return new MDictDictionary(id, filePath, tags, keys,
+                    recordOffsets, sortedOffsets, recordBlockInfo,
+                    channel, recordBlocksStart);
+
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to load index cache for " + filePath, e);
+            return null;
+        }
+    }
+
+    /**
+     * Persists the parsed key index of {@code dict} to {@code cacheFile} so
+     * that {@link #tryLoadFromCache} can reconstruct it on the next load.
+     *
+     * <p>Writes to a sibling temp file first, then renames atomically to
+     * prevent a partial write from corrupting the cache.</p>
+     */
+    private static void saveToCache(@NonNull File cacheFile,
+                                     @NonNull MDictDictionary dict) {
+        // Use getAbsoluteFile() so that getParentFile() is non-null in all
+        // realistic cases (files under context.getFilesDir() are always absolute).
+        File absCache = cacheFile.getAbsoluteFile();
+        File parent = absCache.getParentFile();
+        if (parent == null) {
+            // Defensive: should never happen for a path under context.getFilesDir().
+            Log.w(TAG, "Cannot determine parent directory for cache: " + cacheFile);
+            return;
+        }
+        if (!parent.mkdirs() && !parent.isDirectory()) {
+            Log.w(TAG, "Cannot create cache directory: " + parent);
+            return;
+        }
+        File tmp = new File(parent, absCache.getName() + ".tmp");
+        try {
+            long fileSize = dict.fileChannel.size();
+            try (DataOutputStream dos = new DataOutputStream(
+                    new BufferedOutputStream(new FileOutputStream(tmp), CACHE_BUFFER_SIZE))) {
+                dos.write(CACHE_MAGIC);
+                dos.writeByte(CACHE_VERSION);
+                dos.writeLong(fileSize);
+
+                // Tags
+                dos.writeShort(dict.tags.size());
+                for (Map.Entry<String, String> e : dict.tags.entrySet()) {
+                    dos.writeUTF(e.getKey());
+                    dos.writeUTF(e.getValue());
+                }
+
+                // id
+                dos.writeUTF(dict.id);
+
+                // Keys + offsets
+                dos.writeInt(dict.keys.size());
+                for (String k : dict.keys) dos.writeUTF(k);
+                for (long off : dict.recordOffsets) dos.writeLong(off);
+                for (long off : dict.sortedOffsets) dos.writeLong(off);
+
+                // Record block info
+                dos.writeInt(dict.recordBlockInfo.size());
+                for (long[] info : dict.recordBlockInfo) {
+                    dos.writeLong(info[0]);
+                    dos.writeLong(info[1]);
+                    dos.writeLong(info[2]);
+                }
+
+                // Record blocks start
+                dos.writeLong(dict.recordBlocksStart);
+            }
+            if (!tmp.renameTo(absCache)) {
+                Log.w(TAG, "Failed to rename cache temp file to " + absCache);
+                //noinspection ResultOfMethodCallIgnored
+                tmp.delete();
+            } else {
+                Log.d(TAG, "Saved index cache for " + dict.filePath
+                        + " (" + dict.keys.size() + " keys)");
+            }
+        } catch (IOException e) {
+            Log.w(TAG, "Failed to save index cache for " + dict.filePath, e);
+            //noinspection ResultOfMethodCallIgnored
+            tmp.delete();
+        }
+    }
+
+    /** ZLIB decompression helper. */
     @NonNull
     private static byte[] zlibDecompress(@NonNull byte[] data, int expectedSize) throws IOException {
         Inflater inf = new Inflater();

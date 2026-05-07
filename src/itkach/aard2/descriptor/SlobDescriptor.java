@@ -137,6 +137,33 @@ public class SlobDescriptor extends BaseDescriptor {
     }
 
     // -----------------------------------------------------------------------
+    // Persistent data cleanup
+    // -----------------------------------------------------------------------
+
+    /**
+     * Deletes any persisted data (extracted files, index caches) that was
+     * created for this dictionary.  Safe to call on any format; formats that
+     * do not produce persistent data are silently skipped.
+     *
+     * <p>Should be called on a background thread when the user removes
+     * ("forgets") the dictionary.</p>
+     */
+    public void cleanupPersistedData(@NonNull Context context) {
+        if (path == null) return;
+        switch (format) {
+            case FORMAT_STARDICT_ARCHIVE:
+                StarDictDictionary.cleanupPersistedData(context, path);
+                break;
+            case FORMAT_MDICT:
+                MDictDictionary.cleanupPersistedData(context, path);
+                break;
+            default:
+                // FORMAT_SLOB and FORMAT_STARDICT produce no persistent local data.
+                break;
+        }
+    }
+
+    // -----------------------------------------------------------------------
     // Display helpers
     // -----------------------------------------------------------------------
 
