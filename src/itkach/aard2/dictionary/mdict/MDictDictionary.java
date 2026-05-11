@@ -233,6 +233,13 @@ public final class MDictDictionary implements Dictionary {
         // Parse XML attributes from header
         Map<String, String> tags = parseHeaderXml(headerXml, filePath);
 
+        // ── Encryption Handling ──────────────────────────────────────────────
+        String encryptedStr = tags.getOrDefault("encrypted", "No");
+        if ("1".equals(encryptedStr) || "Yes".equalsIgnoreCase(encryptedStr)) {
+            throw new IOException("User identification is needed to read this encrypted MDict file (Encrypted=1). Not supported.");
+        }
+        final boolean isEncryptedType2 = "2".equals(encryptedStr) || encryptedStr.startsWith("2");
+
         // ── Format version ───────────────────────────────────────────────────
         // GeneratedByEngineVersion drives all number-width decisions:
         //   version >= 2.0 → numbers are uint64 (8 bytes); key block header has
@@ -260,14 +267,14 @@ public final class MDictDictionary implements Dictionary {
         // ── Key Block Header ─────────────────────────────────────────────────
         // v2+: 5 big-endian uint64 fields + 4-byte Adler32 = 44 bytes
         // v1.x: 4 big-endian uint32 fields, no kbiDecompSize, no Adler32 = 16 bytes
-        final long numKeyBlocks, numEntries, kbiSize, afterKbHeader;
+        final long numKeyBlocks, numEntries, kbiSize, afterKbHeader, kbiDecompSize;
         if (isV2Plus) {
             ByteBuffer kbh = ByteBuffer.allocate(40);
             kbh.order(ByteOrder.BIG_ENDIAN);
             readFully(channel, kbh, afterHeader);
             numKeyBlocks = kbh.getLong();
             numEntries   = kbh.getLong();
-            kbh.getLong(); // kbiDecompSize
+            kbiDecompSize = kbh.getLong();
             kbiSize      = kbh.getLong();
             kbh.getLong(); // kbSize
             afterKbHeader = afterHeader + 40 + 4; // +4 for Adler32
@@ -276,6 +283,7 @@ public final class MDictDictionary implements Dictionary {
             kbh.order(ByteOrder.BIG_ENDIAN);
             readFully(channel, kbh, afterHeader);
             numKeyBlocks = kbh.getInt() & 0xFFFFFFFFL;
+            kbiDecompSize = 0;
             numEntries   = kbh.getInt() & 0xFFFFFFFFL;
             kbiSize      = kbh.getInt() & 0xFFFFFFFFL;
             kbh.getInt(); // kbSize
@@ -283,8 +291,8 @@ public final class MDictDictionary implements Dictionary {
         }
 
         // ── Key Block Info ───────────────────────────────────────────────────
-        long[] kbSizes = readKeyBlockInfo(channel, afterKbHeader, (int) numKeyBlocks, kbiSize,
-                keyIsUtf16le, isV2Plus);
+        long[] kbSizes = readKeyBlockInfo(channel, afterKbHeader, (int) numKeyBlocks, kbiSize, kbiDecompSize,
+                keyIsUtf16le, isV2Plus, isEncryptedType2);
         long afterKbi = afterKbHeader + kbiSize;
 
         // ── Key Blocks ───────────────────────────────────────────────────────
@@ -657,8 +665,10 @@ public final class MDictDictionary implements Dictionary {
                                             long offset,
                                             int numBlocks,
                                             long kbiSize,
+                                            long kbiDecompSize,
                                             boolean keysAreUtf16le,
-                                            boolean isV2Plus) throws IOException {
+                                            boolean isV2Plus,
+                                            boolean isEncryptedType2) throws IOException {
         ByteBuffer raw = ByteBuffer.allocate((int) kbiSize);
         readFully(channel, raw, offset);
 
@@ -670,8 +680,25 @@ public final class MDictDictionary implements Dictionary {
             raw.position(8);
             byte[] data = new byte[raw.remaining()];
             raw.get(data);
+
+
             if (compType == COMP_ZLIB) {
-                decompressed = zlibDecompress(data, numBlocks * 40);
+                byte[] dataToDecompress = data;
+                if (isEncryptedType2) {
+                    // Reconstruct the full block (8-byte header + data) because
+                    // mdxDecrypt requires bytes 4..7 to generate the decryption key.
+                    byte[] fullBlock = new byte[8 + data.length];
+                    raw.position(0);
+                    raw.get(fullBlock, 0, 8);
+                    System.arraycopy(data, 0, fullBlock, 8, data.length);
+
+                    // Decrypts in place starting at byte 8
+                    mdxDecrypt(fullBlock);
+
+                    // Extract the now-decrypted payload
+                    dataToDecompress = Arrays.copyOfRange(fullBlock, 8, fullBlock.length);
+                }
+                decompressed = zlibDecompress(dataToDecompress, (int) kbiDecompSize);
             } else {
                 decompressed = data;
             }
@@ -920,10 +947,25 @@ public final class MDictDictionary implements Dictionary {
         }
     }
 
-    /** ZLIB decompression helper. */
+    /** ZLIB decompression helper with raw deflate fallback. */
     @NonNull
     private static byte[] zlibDecompress(@NonNull byte[] data, int expectedSize) throws IOException {
-        Inflater inf = new Inflater();
+        try {
+            // Try standard ZLIB format (expects 2-byte header)
+            return doInflate(data, expectedSize, false);
+        } catch (IOException e) {
+            // Some MDict tools incorrectly emit raw deflate but label it as zlib.
+            // Fallback to raw deflate (nowrap) if we get a header check error.
+            if (e.getMessage() != null && e.getMessage().contains("incorrect header check")) {
+                return doInflate(data, expectedSize, true);
+            }
+            throw e;
+        }
+    }
+
+    @NonNull
+    private static byte[] doInflate(@NonNull byte[] data, int expectedSize, boolean nowrap) throws IOException {
+        Inflater inf = new Inflater(nowrap);
         inf.setInput(data);
         byte[] out = new byte[Math.max(expectedSize, data.length * 4)];
         int totalRead = 0;
@@ -931,7 +973,6 @@ public final class MDictDictionary implements Dictionary {
             while (!inf.finished()) {
                 int need = out.length - totalRead;
                 if (need == 0) {
-                    // grow buffer
                     byte[] larger = new byte[out.length * 2];
                     System.arraycopy(out, 0, larger, 0, out.length);
                     out = larger;
@@ -952,6 +993,155 @@ public final class MDictDictionary implements Dictionary {
         byte[] result = new byte[totalRead];
         System.arraycopy(out, 0, result, 0, totalRead);
         return result;
+    }
+
+    /**
+     * Decrypts an MDict block (Key Block Info) when Encrypted=2.
+     * The first 8 bytes are untouched (comp_type + checksum).
+     * Decryption starts at byte 8.
+     */
+    private static void mdxDecrypt(byte[] block) {
+        byte[] keyBuffer = new byte[8];
+        System.arraycopy(block, 4, keyBuffer, 0, 4); // Extract bytes 4..7
+        keyBuffer[4] = (byte) 0x95;
+        keyBuffer[5] = (byte) 0x36;
+        // keyBuffer[6] and [7] remain 0x00
+
+        byte[] key = ripemd128(keyBuffer);
+        fastDecrypt(block, 8, block.length - 8, key);
+    }
+
+    /**
+     * Fast MDict decryption algorithm.
+     */
+    private static void fastDecrypt(byte[] data, int startOffset, int length, byte[] key) {
+        int previous = 0x36;
+        for (int i = 0; i < length; i++) {
+            int idx = startOffset + i;
+            int original = data[idx] & 0xFF;
+            int t = ((original >>> 4) | (original << 4)) & 0xFF;
+            int decrypted = t ^ (previous & 0xFF) ^ (i & 0xFF) ^ (key[i % key.length] & 0xFF);
+            previous = data[idx] & 0xFF;
+            data[idx] = (byte) decrypted;
+        }
+    }
+
+    /**
+     * Exact port of the provided JS ripemd128 implementation.
+     * NOTE: Intentionally contains the 0x00000000 constant bug from the JS source,
+     * as the dictionary file requires this specific non-standard hash to decrypt correctly.
+     */
+    @NonNull
+    private static byte[] ripemd128(@NonNull byte[] data) {
+        int[] hash = {0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476};
+
+        // Note the 8th element is 0x00000000 instead of the standard 0x7A6D76E9!
+        int[] K = {
+                0x00000000, 0x5A827999, 0x6ED9EBA1, 0x8F1BBCDC,
+                0x50A28BE6, 0x5C4DD124, 0x6D703EF3, 0x00000000
+        };
+
+        int[][] S = {
+                {11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8},
+                {7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12},
+                {11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5, 12, 7, 5},
+                {11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12},
+                {8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6},
+                {9, 13, 15, 7, 12, 8, 9, 11, 7, 7, 12, 7, 6, 15, 13, 11},
+                {9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14, 13, 13, 7, 5},
+                {15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8}
+        };
+
+        int[][] X = {
+                {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+                {7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8},
+                {3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11, 5, 12},
+                {1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2},
+                {5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12},
+                {6, 11, 3, 7, 0, 13, 5, 10, 14, 15, 8, 12, 4, 9, 1, 2},
+                {15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0, 4, 13},
+                {8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14}
+        };
+
+        int bytes = data.length;
+        int padLen = (bytes % 64 < 56 ? 56 : 120) - (bytes % 64);
+
+        // FIX: Added +8 here! The JS code does a concat() which adds the 8 byte length to the end.
+        byte[] padded = new byte[bytes + padLen + 8];
+        System.arraycopy(data, 0, padded, 0, bytes);
+        padded[bytes] = (byte) 0x80;
+
+        // Match JS bitwise truncation behavior exactly
+        bytes = bytes << 3;
+        padded[padded.length - 8] = (byte) (bytes & 0xFF);
+        padded[padded.length - 7] = (byte) ((bytes >>> 8) & 0xFF);
+        padded[padded.length - 6] = (byte) ((bytes >>> 16) & 0xFF);
+        padded[padded.length - 5] = (byte) ((bytes >>> 24) & 0xFF);
+        padded[padded.length - 4] = (byte) ((bytes >>> 31) & 0xFF); // JS uses >>> 31 instead of >>> 32
+        padded[padded.length - 3] = 0;
+        padded[padded.length - 2] = 0;
+        padded[padded.length - 1] = 0;
+
+        int[] x = new int[padded.length / 4];
+        for (int i = 0; i < x.length; i++) {
+            x[i] = (padded[i * 4] & 0xFF) |
+                    ((padded[i * 4 + 1] & 0xFF) << 8) |
+                    ((padded[i * 4 + 2] & 0xFF) << 16) |
+                    ((padded[i * 4 + 3] & 0xFF) << 24);
+        }
+
+        int aa, bb, cc, dd, aaa, bbb, ccc, ddd;
+        for (int i = 0; i < x.length; i += 16) {
+            aa = aaa = hash[0];
+            bb = bbb = hash[1];
+            cc = ccc = hash[2];
+            dd = ddd = hash[3];
+
+            int t = 0;
+            while (t < 64) {
+                int r = t / 16;
+                aa = rotl(aa + f(r, bb, cc, dd) + x[i + X[r][t % 16]] + K[r], S[r][t % 16]);
+                int tmp = dd; dd = cc; cc = bb; bb = aa; aa = tmp;
+                t++;
+            }
+
+            while (t < 128) {
+                int r = t / 16;
+                int rr = (63 - (t % 64)) / 16;
+                aaa = rotl(aaa + f(rr, bbb, ccc, ddd) + x[i + X[r][t % 16]] + K[r], S[r][t % 16]);
+                int tmp = ddd; ddd = ccc; ccc = bbb; bbb = aaa; aaa = tmp;
+                t++;
+            }
+
+            int tmpD = hash[1] + cc + ddd;
+            hash[1] = hash[2] + dd + aaa;
+            hash[2] = hash[3] + aa + bbb;
+            hash[3] = hash[0] + bb + ccc;
+            hash[0] = tmpD;
+        }
+
+        byte[] result = new byte[16];
+        for (int j = 0; j < 4; j++) {
+            result[j * 4] = (byte) (hash[j] & 0xFF);
+            result[j * 4 + 1] = (byte) ((hash[j] >>> 8) & 0xFF);
+            result[j * 4 + 2] = (byte) ((hash[j] >>> 16) & 0xFF);
+            result[j * 4 + 3] = (byte) ((hash[j] >>> 24) & 0xFF);
+        }
+        return result;
+    }
+
+    private static int rotl(int x, int n) {
+        return (x >>> (32 - n)) | (x << n);
+    }
+
+    private static int f(int r, int x, int y, int z) {
+        switch (r) {
+            case 0: return x ^ y ^ z;
+            case 1: return (x & y) | (~x & z);
+            case 2: return (x | ~y) ^ z;
+            case 3: return (x & z) | (y & ~z);
+            default: return x ^ y ^ z;
+        }
     }
 
     private static void readFully(@NonNull FileChannel channel,
@@ -975,7 +1165,8 @@ public final class MDictDictionary implements Dictionary {
         // Simple attribute extraction via regex-free scanning
         for (String attr : new String[]{"Title", "Encoding", "Description",
                 "Format", "CreationDate", "Website", "Copyright", "Author",
-                "GeneratedByEngineVersion"}) {
+                "GeneratedByEngineVersion",
+                "Encrypted"}) {
             String val = extractAttr(xml, attr);
             if (val != null) {
                 tags.put(attr.toLowerCase(), val);
