@@ -23,8 +23,8 @@ android {
         applicationId "com.akylas.aard2"
         minSdk 21
         targetSdk 36
-        versionCode 73
-        versionName "2.0.0"
+        versionCode 74
+        versionName "2.0.1"
     }
 
 
