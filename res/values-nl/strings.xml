@@ -99,4 +99,17 @@
     <string name="permission_internet_required_title">Internettoegang vereist</string>
     <string name="permission_internet_required_message">Deze app vereist internettoegang om correct te functioneren. Hoewel de app niet direct gebruikmaakt van internet, heeft het deze toestemming wel nodig voor interne socketcommunicatie. Schakel de internettoegang in via de instellingen van je apparaat.</string>
     <string name="setting_disable_bottom_nav_labels">Onderste navigatielabels uitschakelen</string>
+    <string name="formats_supported_header">Ondersteunde bestanden: .slob, .mdx, .zip (Stardict, GoldenDict)</string>
+    <string name="main_empty_dictionaries_title">Geen geopende woordenboeken</string>
+    <string name="main_empty_dictionaries_subtitle">OSS-Dict ondersteunt de volgende bestanden</string>
+    <string name="main_empty_dictionaries_download_text">Je kunt links voor woordenboeken vinden</string>
+    <string name="here">hier</string>
+    <string name="msg_loading_dictionary">Woordenboek laden…</string>
+    <string name="main_empty_dictionaries_details"><![CDATA[
+        <b>Geen geopende woordenboeken</b><br/><br/>
+        <small>
+        OSS-Dict ondersteunt de volgende bestanden: <b>.slob</b> (Aard/slob), <b>.mdx</b> (MDict), <b>StarDict</b> as <b>.zip</b> archieven met .ifo/.dict/.idx.<br/><br/>
+        Je kunt kant-en-klare woordenboeken downloaden van de projectwiki.: <a href="https://github.com/itkach/slob/wiki/Dictionaries">Woordenboeken (slob repo)</a> of via de OSS‑Dict-publicaties en gemeenschapsarchieven.
+        </small>
+        ]]></string>
 </resources>
