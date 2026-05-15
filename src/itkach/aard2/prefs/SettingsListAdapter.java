@@ -46,23 +46,24 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     private final Fragment fragment;
 
     final static int POS_AUTO_LOAD_FOLDER = 0;
-    final static int POS_UI_THEME = 1;
-    final static int POS_FORCE_DARK = 2;
-    final static int POS_REMOTE_CONTENT = 3;
-    final static int POS_REMOTE_CONTENT_CACHE = 4;
-    final static int POS_FAV_RANDOM = 5;
-    final static int POS_USE_VOLUME_FOR_NAV = 6;
-    final static int POS_SHOW_KEYBOARD_LOOKUP = 7;
-    final static int POS_AUTO_PASTE = 8;
-    final static int POS_DISABLE_RANDOM_LOOKUP = 9;
-    final static int POS_DISABLE_BOOKMARKS = 10;
-    final static int POS_DISABLE_HISTORY = 11;
-    final static int POS_DISABLE_TAB_LABELS = 12;
-    final static int POS_DISABLE_JS = 13;
-    final static int POS_USER_STYLES = 14;
-    final static int POS_CLEAR_CACHE = 15;
-    final static int POS_ABOUT = 16;
-    final static int POS_OPEN_MISSING_BROWSER = 17;
+    final static int POS_AUTO_MOVE_TO_FOLDER = 1;
+    final static int POS_UI_THEME = 2;
+    final static int POS_FORCE_DARK = 3;
+    final static int POS_REMOTE_CONTENT = 4;
+    final static int POS_REMOTE_CONTENT_CACHE = 5;
+    final static int POS_FAV_RANDOM = 6;
+    final static int POS_USE_VOLUME_FOR_NAV = 7;
+    final static int POS_SHOW_KEYBOARD_LOOKUP = 8;
+    final static int POS_AUTO_PASTE = 9;
+    final static int POS_DISABLE_RANDOM_LOOKUP = 10;
+    final static int POS_DISABLE_BOOKMARKS = 11;
+    final static int POS_DISABLE_HISTORY = 12;
+    final static int POS_DISABLE_TAB_LABELS = 13;
+    final static int POS_DISABLE_JS = 14;
+    final static int POS_USER_STYLES = 15;
+    final static int POS_CLEAR_CACHE = 16;
+    final static int POS_ABOUT = 17;
+    final static int POS_OPEN_MISSING_BROWSER = 18;
 
     SettingsListAdapter(Fragment fragment) {
         this.fragment = fragment;
@@ -78,7 +79,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
 
     @Override
     public int getItemCount() {
-        return 18;
+        return 19;
     }
 
     @Override
@@ -191,6 +192,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_AUTO_LOAD_FOLDER:
                 getAutoLoadFolderView(holder);
                 break;
+            case POS_AUTO_MOVE_TO_FOLDER:
+                getAutoMoveToFolderView(holder);
+                break;
         }
     }
 
@@ -279,6 +283,33 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         });
         view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
         toggle.setChecked(AppPrefs.useVolumeKeysForNavigation());
+    }
+    
+    private void getAutoMoveToFolderView(@NonNull ViewHolder holder) {
+        View view = holder.itemView;
+        MaterialSwitch toggle = view.findViewById(R.id.setting_switch);
+        toggle.setText(R.string.setting_auto_move_to_folder);
+        
+        // Only enable if auto-load folder is set
+        String folderUri = AppPrefs.getAutoLoadDictFolderUri();
+        toggle.setEnabled(!folderUri.isEmpty());
+        
+        toggle.setOnClickListener(v -> {
+            boolean currentValue = AppPrefs.autoMoveToFolder();
+            boolean newValue = !currentValue;
+            AppPrefs.setAutoMoveToFolder(newValue);
+            toggle.setChecked(newValue);
+        });
+        
+        TextView subtitle = view.findViewById(R.id.setting_subtitle);
+        if (folderUri.isEmpty()) {
+            subtitle.setVisibility(View.VISIBLE);
+            subtitle.setText(R.string.setting_auto_move_to_folder_subtitle_disabled);
+        } else {
+            subtitle.setVisibility(View.GONE);
+        }
+        
+        toggle.setChecked(AppPrefs.autoMoveToFolder());
     }
 
     private void getShowKeyboarOnLookupView(@NonNull ViewHolder holder) {
@@ -564,6 +595,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
                         if (fragment instanceof SettingsFragment) {
                             ((SettingsFragment) fragment).clearAutoLoadFolder();
                         }
+                        // Refresh both settings
+                        notifyItemChanged(POS_AUTO_LOAD_FOLDER);
+                        notifyItemChanged(POS_AUTO_MOVE_TO_FOLDER);
                     })
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();

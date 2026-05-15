@@ -90,7 +90,7 @@ public class SettingsFragment extends Fragment {
                 // Use DictionaryFolderManager singleton which handles everything
                 DictionaryFolderManager.getInstance(requireContext()).setAutoLoadFolder(uri, null);
                 
-                // Refresh the settings to show the selected folder
+                // Refresh the settings to show the selected folder and enable auto-move
                 if (recyclerView != null && recyclerView.getAdapter() != null) {
                     recyclerView.getAdapter().notifyDataSetChanged();
                 }

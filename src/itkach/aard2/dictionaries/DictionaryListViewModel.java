@@ -65,6 +65,10 @@ public class DictionaryListViewModel extends AndroidViewModel {
             // Signal that loading has started (before any blocking I/O begins).
             loadingCount.addAndGet(selection.size());
             isLoading.postValue(true);
+            
+            // Check if auto-move is enabled and folder is set
+            boolean shouldShowMoveHint = itkach.aard2.prefs.AppPrefs.autoMoveToFolder() 
+                    && !itkach.aard2.prefs.AppPrefs.getAutoLoadDictFolderUri().isEmpty();
 
             for (Uri uri : selection) {
                 try {
@@ -80,6 +84,15 @@ public class DictionaryListViewModel extends AndroidViewModel {
                         isLoading.postValue(false);
                     }
                 }
+            }
+            
+            // Show hint about moving files if enabled
+            if (shouldShowMoveHint && selection.size() > 0) {
+                itkach.aard2.utils.ThreadUtils.postOnMainThread(() -> {
+                    android.widget.Toast.makeText(getApplication(), 
+                            itkach.aard2.R.string.msg_move_to_auto_load_folder_hint,
+                            android.widget.Toast.LENGTH_LONG).show();
+                });
             }
         });
     }

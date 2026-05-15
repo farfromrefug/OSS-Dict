@@ -97,10 +97,14 @@
     <string name="msg_no_activity_to_select_folder">No app available to select folder</string>
     <string name="setting_auto_load_folder">Auto-Load Dictionary Folder</string>
     <string name="setting_auto_load_folder_subtitle">Automatically load dictionaries from a selected folder</string>
+    <string name="setting_auto_move_to_folder">Auto-Move to Folder</string>
+    <string name="setting_auto_move_to_folder_subtitle_disabled">Set an auto-load folder first</string>
+    <string name="action_select_dictionary_folder">Select Dictionary Folder</string>
     <string name="action_clear">Clear</string>
     <string name="msg_folder_selected">Folder selected successfully</string>
     <string name="msg_failed_to_select_folder">Failed to select folder</string>
     <string name="msg_folder_cleared">Auto-load folder cleared</string>
+    <string name="msg_move_to_auto_load_folder_hint">Tip: Move dictionary files to your auto-load folder for automatic management</string>
     <string name="dialog_clear_auto_load_folder_title">Clear Auto-Load Folder?</string>
     <string name="dialog_clear_auto_load_folder_message">All dictionaries loaded from this folder will be removed from the app. This action cannot be undone.</string>
     <string name="action_clear">Clear</string>
