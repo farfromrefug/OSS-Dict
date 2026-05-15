@@ -158,22 +158,4 @@ public class DictionaryListViewModel extends AndroidViewModel {
             }
         });
     }
-
-    /**
-     * Scans the configured auto-load folder for changes.
-     */
-    public void scanAutoLoadFolder() {
-        ThreadUtils.postOnBackgroundThread(() -> {
-            folderManager.scanAndSync(isLoading -> {
-                if (isLoading) {
-                    loadingCount.incrementAndGet();
-                    this.isLoading.postValue(true);
-                } else {
-                    if (loadingCount.decrementAndGet() == 0) {
-                        this.isLoading.postValue(false);
-                    }
-                }
-            });
-        });
-    }
 }

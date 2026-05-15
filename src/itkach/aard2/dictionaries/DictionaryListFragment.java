@@ -74,6 +74,7 @@ public class DictionaryListFragment extends BaseListFragment {
                 if (uri == null) {
                     return;
                 }
+                viewModel.setAutoLoadFolder(uri);
                 try {
                     // Take persistable URI permission
                     requireActivity().getContentResolver().takePersistableUriPermission(uri,
