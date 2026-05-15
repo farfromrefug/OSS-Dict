@@ -62,6 +62,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     final static int POS_CLEAR_CACHE = 14;
     final static int POS_ABOUT = 15;
     final static int POS_OPEN_MISSING_BROWSER = 16;
+    final static int POS_AUTO_LOAD_FOLDER = 17;
 
     SettingsListAdapter(Fragment fragment) {
         this.fragment = fragment;
@@ -77,7 +78,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
 
     @Override
     public int getItemCount() {
-        return 17;
+        return 18;
     }
 
     @Override
@@ -114,6 +115,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_SHOW_KEYBOARD_LOOKUP:
             case POS_OPEN_MISSING_BROWSER:
                 view = LayoutInflater.from(parent.getContext()).inflate(R.layout.settings_switch, parent, false);
+                break;
+            case POS_AUTO_LOAD_FOLDER:
+                view = LayoutInflater.from(parent.getContext()).inflate(R.layout.settings_auto_load_folder_item, parent, false);
                 break;
             case POS_USER_STYLES:
                 view = LayoutInflater.from(parent.getContext()).inflate(R.layout.settings_user_styles_item, parent, false);
@@ -183,6 +187,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
                 break;
             case POS_ABOUT:
                 getAboutView(holder);
+                break;
+            case POS_AUTO_LOAD_FOLDER:
+                getAutoLoadFolderView(holder);
                 break;
         }
     }
@@ -518,6 +525,39 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         TextView versionView = view.findViewById(R.id.application_version);
         versionView.setText(context.getString(R.string.application_version, versionName));
 
+    }
+
+    private void getAutoLoadFolderView(@NonNull ViewHolder holder) {
+        View view = holder.itemView;
+        MaterialCardView card = view.findViewById(R.id.card_view);
+        card.setCardBackgroundColor(SurfaceColors.SURFACE_1.getColor(context));
+        
+        MaterialTextView title = view.findViewById(R.id.title);
+        MaterialTextView subtitle = view.findViewById(R.id.subtitle);
+        MaterialButton selectButton = view.findViewById(R.id.select_folder_button);
+        MaterialButton clearButton = view.findViewById(R.id.clear_folder_button);
+        
+        title.setText(R.string.setting_auto_load_folder);
+        
+        String folderUri = AppPrefs.getAutoLoadDictFolderUri();
+        if (folderUri.isEmpty()) {
+            subtitle.setText(R.string.setting_auto_load_folder_subtitle);
+            clearButton.setVisibility(View.GONE);
+        } else {
+            subtitle.setText(folderUri);
+            clearButton.setVisibility(View.VISIBLE);
+        }
+        
+        selectButton.setOnClickListener(v -> {
+            if (fragment instanceof SettingsFragment) {
+                ((SettingsFragment) fragment).selectAutoLoadFolder();
+            }
+        });
+        
+        clearButton.setOnClickListener(v -> {
+            AppPrefs.setAutoLoadDictFolderUri("");
+            notifyItemChanged(POS_AUTO_LOAD_FOLDER);
+        });
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {

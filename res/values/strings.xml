@@ -93,6 +93,13 @@
     <string name="main_empty_bookmarks">No bookmarks</string>
     <string name="main_empty_history">No history</string>
     <string name="main_empty_dictionaries">No dictionaries</string>
+    <string name="action_select_dictionary_folder">Select Dictionary Folder</string>
+    <string name="msg_no_activity_to_select_folder">No app available to select folder</string>
+    <string name="setting_auto_load_folder">Auto-Load Dictionary Folder</string>
+    <string name="setting_auto_load_folder_subtitle">Automatically load dictionaries from a selected folder</string>
+    <string name="action_clear">Clear</string>
+    <string name="msg_folder_selected">Folder selected successfully</string>
+    <string name="msg_failed_to_select_folder">Failed to select folder</string>
     <string name="delete">Delete</string>
 
     <plurals name="confirm_delete_bookmark_count">

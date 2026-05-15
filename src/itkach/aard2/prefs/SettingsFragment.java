@@ -1,5 +1,7 @@
 package itkach.aard2.prefs;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -70,6 +72,40 @@ public class SettingsFragment extends Fragment {
                 }
             });
 
+    public final ActivityResultLauncher<Intent> autoLoadFolderChooser = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result == null || result.getResultCode() != android.app.Activity.RESULT_OK) {
+                    return;
+                }
+                android.content.Intent intent = result.getData();
+                if (intent == null) {
+                    return;
+                }
+                Uri uri = intent.getData();
+                if (uri == null) {
+                    return;
+                }
+                try {
+                    // Take persistable URI permission
+                    requireActivity().getContentResolver().takePersistableUriPermission(uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    
+                    // Save the folder URI
+                    AppPrefs.setAutoLoadDictFolderUri(uri.toString());
+                    
+                    // Refresh the settings to show the selected folder
+                    if (recyclerView != null && recyclerView.getAdapter() != null) {
+                        recyclerView.getAdapter().notifyDataSetChanged();
+                    }
+                    
+                    Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to set auto-load folder", e);
+                    Toast.makeText(requireActivity(), R.string.msg_failed_to_select_folder, Toast.LENGTH_LONG).show();
+                }
+            });
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -93,6 +129,17 @@ public class SettingsFragment extends Fragment {
         if (activity instanceof MainActivity) {
             ((MainActivity) activity).requireActionBar().setTitle(R.string.subtitle_settings);
             ((MainActivity) activity).requireActionBar().setSubtitle(null);
+        }
+    }
+
+    public void selectAutoLoadFolder() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try {
+            autoLoadFolderChooser.launch(intent);
+        } catch (Exception e) {
+            Log.d(TAG, "Failed to launch folder chooser", e);
+            Toast.makeText(requireActivity(), R.string.msg_no_activity_to_select_folder, Toast.LENGTH_LONG).show();
         }
     }
 }

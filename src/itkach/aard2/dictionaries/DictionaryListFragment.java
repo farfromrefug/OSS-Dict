@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -20,6 +21,7 @@ import android.text.Spanned;
 import androidx.core.text.HtmlCompat;
 import android.widget.TextView;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 
 import itkach.aard2.BaseListFragment;
@@ -57,6 +59,18 @@ public class DictionaryListFragment extends BaseListFragment {
                 }
                 viewModel.updateDictionary(uri);
             });
+    private final ActivityResultLauncher<Intent> folderSelector = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result == null || result.getResultCode() != Activity.RESULT_OK) {
+                    return;
+                }
+                Intent intent = result.getData();
+                Uri uri = intent != null ? intent.getData() : null;
+                if (uri == null) {
+                    return;
+                }
+                viewModel.setAutoLoadFolder(uri);
+            });
 
     @DrawableRes
     @Override
@@ -87,6 +101,32 @@ public class DictionaryListFragment extends BaseListFragment {
         viewModel = new ViewModelProvider(this).get(DictionaryListViewModel.class);
         DictionaryListAdapter listAdapter = new DictionaryListAdapter(SlobHelper.getInstance().dictionaries, this);
         recyclerView.setAdapter(listAdapter);
+
+        // Add a button to select auto-load folder in empty view
+        View container = emptyView.findViewById(R.id.container);
+        if (container instanceof ViewGroup) {
+            ViewGroup containerGroup = (ViewGroup) container;
+            
+            // Check if button doesn't already exist
+            View existingButton = emptyView.findViewWithTag("select_folder_button");
+            if (existingButton == null) {
+                // Create button programmatically
+                MaterialButton selectFolderButton = new MaterialButton(requireContext());
+                selectFolderButton.setText(R.string.action_select_dictionary_folder);
+                selectFolderButton.setTag("select_folder_button");
+                selectFolderButton.setOnClickListener(v -> selectDictionaryFolder());
+                
+                // Add some margin
+                ViewGroup.MarginLayoutParams params = new ViewGroup.MarginLayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+                params.topMargin = (int) (24 * getResources().getDisplayMetrics().density);
+                selectFolderButton.setLayoutParams(params);
+                
+                containerGroup.addView(selectFolderButton);
+            }
+        }
 
 
         // find header (in the fragment_list layout)

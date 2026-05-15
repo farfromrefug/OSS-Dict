@@ -17,6 +17,7 @@ public class AppPrefs extends Prefs {
     private static final String PREF_USE_VOLUME_FOR_NAV = "useVolumeForNav";
     private static final String PREF_AUTO_PASTE = "autoPaste";
     private static final String PREF_SHOW_KEYBOARD_LOOKUP = "showKeyboardLookup";
+    private static final String PREF_AUTO_LOAD_DICT_FOLDER = "autoLoadDictFolder";
 
     public static final String PREF_UI_THEME_AUTO = "auto";
     public static final String PREF_UI_THEME_LIGHT = "light";
@@ -130,5 +131,14 @@ public class AppPrefs extends Prefs {
 
     public static void setDisableBottomNavLabels(boolean disable) {
         getInstance().prefs.edit().putBoolean(PREF_DISABLE_BOTTOM_NAV_LABELS, disable).apply();
+    }
+
+    @NonNull
+    public static String getAutoLoadDictFolderUri() {
+        return getInstance().prefs.getString(PREF_AUTO_LOAD_DICT_FOLDER, "");
+    }
+
+    public static void setAutoLoadDictFolderUri(@NonNull String uri) {
+        getInstance().prefs.edit().putString(PREF_AUTO_LOAD_DICT_FOLDER, uri).apply();
     }
 }
