@@ -63,6 +63,19 @@ public class DictionaryFolderManager {
      */
     @WorkerThread
     public boolean scanAndSync(@Nullable LoadingCallback loadingCallback) {
+        return scanAndSync(loadingCallback, null);
+    }
+    
+    /**
+     * Scans the configured auto-load folder and synchronizes dictionaries with progress updates.
+     * Should be called on a background thread.
+     * 
+     * @param loadingCallback Called with true when loading starts, false when it ends
+     * @param progressCallback Called with progress updates during scanning
+     * @return true if any changes were made
+     */
+    @WorkerThread
+    public boolean scanAndSync(@Nullable LoadingCallback loadingCallback, @Nullable ProgressCallback progressCallback) {
         String folderUriStr = AppPrefs.getAutoLoadDictFolderUri();
         if (folderUriStr.isEmpty()) {
             return false;
@@ -74,10 +87,14 @@ public class DictionaryFolderManager {
         if (loadingCallback != null) {
             ThreadUtils.postOnMainThread(() -> loadingCallback.onLoadingChanged(true));
         }
+        
+        if (progressCallback != null) {
+            ThreadUtils.postOnMainThread(progressCallback::onScanStarted);
+        }
 
         try {
             DictionaryScanner.ScanResult scanResult = DictionaryScanner.scanFolder(context, folderUri);
-            boolean changed = syncDictionaries(scanResult);
+            boolean changed = syncDictionaries(scanResult, progressCallback);
             return changed;
         } finally {
             if (loadingCallback != null) {
@@ -92,12 +109,38 @@ public class DictionaryFolderManager {
      */
     @WorkerThread
     private boolean syncDictionaries(@NonNull DictionaryScanner.ScanResult scanResult) {
+        return syncDictionaries(scanResult, null);
+    }
+    
+    /**
+     * Synchronizes the dictionary list based on scan results with progress updates.
+     * Handles additions, removals, and broken dictionary detection.
+     */
+    @WorkerThread
+    private boolean syncDictionaries(@NonNull DictionaryScanner.ScanResult scanResult, 
+                                     @Nullable ProgressCallback progressCallback) {
         boolean changed = false;
+        int addedCount = 0;
+        int removedCount = 0;
         Set<String> currentAutoLoadIds = new HashSet<>(autoLoadedDictionaries.keySet());
+        
+        int totalDicts = scanResult.dictionaries.size();
+        int currentIndex = 0;
 
         // Process each scanned dictionary
         for (DictionaryScanner.DictionaryFileSet fileSet : scanResult.dictionaries) {
+            currentIndex++;
             String fileUri = fileSet.mainFile.getUri().toString();
+            String dictName = fileSet.mainFile.getName();
+            
+            // Notify progress
+            if (progressCallback != null && dictName != null) {
+                final int current = currentIndex;
+                final int total = totalDicts;
+                final String name = dictName;
+                ThreadUtils.postOnMainThread(() -> 
+                    progressCallback.onDictionaryLoading(name, current, total));
+            }
             
             // Check if this file URI is already tracked
             boolean alreadyLoaded = autoLoadedDictionaries.containsValue(fileUri);
@@ -110,6 +153,7 @@ public class DictionaryFolderManager {
                     if (dictId != null) {
                         autoLoadedDictionaries.put(dictId, fileUri);
                         changed = true;
+                        addedCount++;
                     }
                 } else {
                     // Find the dictionary ID for this file URI
@@ -146,7 +190,16 @@ public class DictionaryFolderManager {
                 autoLoadedDictionaries.remove(removedId);
                 brokenDictionaries.remove(removedId);
                 changed = true;
+                removedCount++;
             }
+        }
+        
+        // Notify completion
+        if (progressCallback != null) {
+            final int added = addedCount;
+            final int removed = removedCount;
+            ThreadUtils.postOnMainThread(() -> 
+                progressCallback.onScanCompleted(added, removed));
         }
 
         return changed;
@@ -293,6 +346,15 @@ public class DictionaryFolderManager {
      * Clears any existing auto-loaded dictionaries first, then triggers a scan.
      */
     public void setAutoLoadFolder(@NonNull Uri folderUri, @Nullable LoadingCallback loadingCallback) {
+        setAutoLoadFolder(folderUri, loadingCallback, null);
+    }
+    
+    /**
+     * Sets the auto-load folder URI with progress updates.
+     * Clears any existing auto-loaded dictionaries first, then triggers a scan.
+     */
+    public void setAutoLoadFolder(@NonNull Uri folderUri, @Nullable LoadingCallback loadingCallback,
+                                  @Nullable ProgressCallback progressCallback) {
         ThreadUtils.postOnBackgroundThread(() -> {
             try {
                 // Clear existing auto-loaded dictionaries first
@@ -317,7 +379,7 @@ public class DictionaryFolderManager {
                 AppPrefs.setAutoLoadDictFolderUri(folderUri.toString());
                 
                 // Trigger scan
-                scanAndSync(loadingCallback);
+                scanAndSync(loadingCallback, progressCallback);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to set auto-load folder: " + folderUri, e);
             }
@@ -379,5 +441,30 @@ public class DictionaryFolderManager {
      */
     public interface LoadingCallback {
         void onLoadingChanged(boolean isLoading);
+    }
+    
+    /**
+     * Callback interface for detailed progress updates during scanning.
+     */
+    public interface ProgressCallback {
+        /**
+         * Called when scanning starts.
+         */
+        void onScanStarted();
+        
+        /**
+         * Called when a dictionary is being loaded.
+         * @param dictionaryName The name of the dictionary being loaded
+         * @param current Current dictionary index (1-based)
+         * @param total Total number of dictionaries to load
+         */
+        void onDictionaryLoading(String dictionaryName, int current, int total);
+        
+        /**
+         * Called when scanning completes.
+         * @param addedCount Number of dictionaries added
+         * @param removedCount Number of dictionaries removed
+         */
+        void onScanCompleted(int addedCount, int removedCount);
     }
 }
