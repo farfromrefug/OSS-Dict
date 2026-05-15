@@ -78,9 +78,7 @@ public class Application extends android.app.Application {
             // After init, scan auto-load folder if configured
             String folderUri = AppPrefs.getAutoLoadDictFolderUri();
             if (!folderUri.isEmpty()) {
-                DictionaryFolderManager folderManager = 
-                    new DictionaryFolderManager(this, slobHelper.dictionaries);
-                folderManager.scanAndSync(null);
+                DictionaryFolderManager.getInstance(this).scanAndSync(null);
             }
         });
     }

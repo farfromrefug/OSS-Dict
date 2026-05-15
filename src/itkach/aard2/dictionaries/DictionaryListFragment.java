@@ -74,20 +74,9 @@ public class DictionaryListFragment extends BaseListFragment {
                 if (uri == null) {
                     return;
                 }
+                // Use the ViewModel method which handles everything
                 viewModel.setAutoLoadFolder(uri);
-                try {
-                    // Take persistable URI permission
-                    requireActivity().getContentResolver().takePersistableUriPermission(uri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-                    // Save the folder URI
-                    AppPrefs.setAutoLoadDictFolderUri(uri.toString());
-
-                    Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
-                } catch (Exception e) {
-                    Log.e(TAG, "Failed to set auto-load folder", e);
-                    Toast.makeText(requireActivity(), R.string.msg_failed_to_select_folder, Toast.LENGTH_LONG).show();
-                }
+                Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
             });
 
     @DrawableRes

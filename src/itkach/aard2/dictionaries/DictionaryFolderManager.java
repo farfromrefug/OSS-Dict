@@ -25,6 +25,8 @@ import itkach.aard2.utils.ThreadUtils;
  */
 public class DictionaryFolderManager {
     private static final String TAG = "DictFolderManager";
+    
+    private static DictionaryFolderManager instance;
 
     private final Context context;
     private final SlobDescriptorList dictionaries;
@@ -35,9 +37,21 @@ public class DictionaryFolderManager {
     // Track incomplete/broken dictionaries (id -> missing file count)
     private final Map<String, Integer> brokenDictionaries = new HashMap<>();
 
-    public DictionaryFolderManager(@NonNull Context context, @NonNull SlobDescriptorList dictionaries) {
+    private DictionaryFolderManager(@NonNull Context context, @NonNull SlobDescriptorList dictionaries) {
         this.context = context;
         this.dictionaries = dictionaries;
+    }
+    
+    /**
+     * Gets the singleton instance of DictionaryFolderManager.
+     */
+    @NonNull
+    public static synchronized DictionaryFolderManager getInstance(@NonNull Context context) {
+        if (instance == null) {
+            instance = new DictionaryFolderManager(context.getApplicationContext(), 
+                    SlobHelper.getInstance().dictionaries);
+        }
+        return instance;
     }
 
     /**
@@ -276,22 +290,88 @@ public class DictionaryFolderManager {
 
     /**
      * Sets the auto-load folder URI.
-     * Triggers an immediate scan if the URI is valid.
+     * Clears any existing auto-loaded dictionaries first, then triggers a scan.
      */
     public void setAutoLoadFolder(@NonNull Uri folderUri, @Nullable LoadingCallback loadingCallback) {
-        try {
-            // Take persistable URI permission for the folder
-            context.getContentResolver().takePersistableUriPermission(folderUri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            
-            // Save the folder URI
-            AppPrefs.setAutoLoadDictFolderUri(folderUri.toString());
-            
-            // Trigger scan on background thread
-            ThreadUtils.postOnBackgroundThread(() -> scanAndSync(loadingCallback));
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to set auto-load folder: " + folderUri, e);
+        ThreadUtils.postOnBackgroundThread(() -> {
+            try {
+                // Clear existing auto-loaded dictionaries first
+                clearAutoLoadedDictionaries();
+                
+                // Release old folder permission if exists
+                String oldFolderUri = AppPrefs.getAutoLoadDictFolderUri();
+                if (!oldFolderUri.isEmpty()) {
+                    try {
+                        context.getContentResolver().releasePersistableUriPermission(
+                                Uri.parse(oldFolderUri), Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Failed to release old folder permission: " + oldFolderUri, e);
+                    }
+                }
+                
+                // Take persistable URI permission for the new folder
+                context.getContentResolver().takePersistableUriPermission(folderUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                
+                // Save the folder URI
+                AppPrefs.setAutoLoadDictFolderUri(folderUri.toString());
+                
+                // Trigger scan
+                scanAndSync(loadingCallback);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to set auto-load folder: " + folderUri, e);
+            }
+        });
+    }
+    
+    /**
+     * Clears the auto-load folder setting and removes all auto-loaded dictionaries.
+     */
+    public void clearAutoLoadFolder(@Nullable LoadingCallback loadingCallback) {
+        ThreadUtils.postOnBackgroundThread(() -> {
+            try {
+                if (loadingCallback != null) {
+                    ThreadUtils.postOnMainThread(() -> loadingCallback.onLoadingChanged(true));
+                }
+                
+                // Remove all auto-loaded dictionaries
+                clearAutoLoadedDictionaries();
+                
+                // Release folder permission
+                String folderUri = AppPrefs.getAutoLoadDictFolderUri();
+                if (!folderUri.isEmpty()) {
+                    try {
+                        context.getContentResolver().releasePersistableUriPermission(
+                                Uri.parse(folderUri), Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Failed to release folder permission: " + folderUri, e);
+                    }
+                }
+                
+                // Clear the preference
+                AppPrefs.setAutoLoadDictFolderUri("");
+                
+                Log.d(TAG, "Auto-load folder cleared");
+            } finally {
+                if (loadingCallback != null) {
+                    ThreadUtils.postOnMainThread(() -> loadingCallback.onLoadingChanged(false));
+                }
+            }
+        });
+    }
+    
+    /**
+     * Removes all dictionaries that were auto-loaded from the folder.
+     */
+    @WorkerThread
+    private void clearAutoLoadedDictionaries() {
+        Set<String> idsToRemove = new HashSet<>(autoLoadedDictionaries.keySet());
+        for (String dictId : idsToRemove) {
+            removeDictionary(dictId);
         }
+        autoLoadedDictionaries.clear();
+        brokenDictionaries.clear();
+        Log.d(TAG, "Cleared " + idsToRemove.size() + " auto-loaded dictionaries");
     }
 
     /**

@@ -36,12 +36,8 @@ public class DictionaryListViewModel extends AndroidViewModel {
     /** Counts in-flight dictionary loads so we only emit false once all complete. */
     private final AtomicInteger loadingCount = new AtomicInteger(0);
 
-    /** Manager for auto-loading dictionaries from a folder */
-    private DictionaryFolderManager folderManager;
-
     public DictionaryListViewModel(@NonNull Application application) {
         super(application);
-        folderManager = new DictionaryFolderManager(application, SlobHelper.getInstance().dictionaries);
     }
 
     @Override
@@ -147,7 +143,23 @@ public class DictionaryListViewModel extends AndroidViewModel {
      * Sets the auto-load folder and triggers a scan.
      */
     public void setAutoLoadFolder(@NonNull Uri folderUri) {
-        folderManager.setAutoLoadFolder(folderUri, isLoading -> {
+        DictionaryFolderManager.getInstance(getApplication()).setAutoLoadFolder(folderUri, isLoading -> {
+            if (isLoading) {
+                loadingCount.incrementAndGet();
+                this.isLoading.postValue(true);
+            } else {
+                if (loadingCount.decrementAndGet() == 0) {
+                    this.isLoading.postValue(false);
+                }
+            }
+        });
+    }
+    
+    /**
+     * Clears the auto-load folder and removes all auto-loaded dictionaries.
+     */
+    public void clearAutoLoadFolder() {
+        DictionaryFolderManager.getInstance(getApplication()).clearAutoLoadFolder(isLoading -> {
             if (isLoading) {
                 loadingCount.incrementAndGet();
                 this.isLoading.postValue(true);

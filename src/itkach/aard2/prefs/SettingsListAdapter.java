@@ -555,8 +555,18 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         });
         
         clearButton.setOnClickListener(v -> {
-            AppPrefs.setAutoLoadDictFolderUri("");
-            notifyItemChanged(POS_AUTO_LOAD_FOLDER);
+            // Show confirmation dialog
+            new MaterialAlertDialogBuilder(context)
+                    .setTitle(R.string.dialog_clear_auto_load_folder_title)
+                    .setMessage(R.string.dialog_clear_auto_load_folder_message)
+                    .setPositiveButton(R.string.action_clear, (dialog, which) -> {
+                        // Clear the folder using the ViewModel/Manager
+                        if (fragment instanceof SettingsFragment) {
+                            ((SettingsFragment) fragment).clearAutoLoadFolder();
+                        }
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
         });
     }
 

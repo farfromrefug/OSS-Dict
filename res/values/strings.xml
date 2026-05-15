@@ -100,6 +100,10 @@
     <string name="action_clear">Clear</string>
     <string name="msg_folder_selected">Folder selected successfully</string>
     <string name="msg_failed_to_select_folder">Failed to select folder</string>
+    <string name="msg_folder_cleared">Auto-load folder cleared</string>
+    <string name="dialog_clear_auto_load_folder_title">Clear Auto-Load Folder?</string>
+    <string name="dialog_clear_auto_load_folder_message">All dictionaries loaded from this folder will be removed from the app. This action cannot be undone.</string>
+    <string name="action_clear">Clear</string>
     <string name="delete">Delete</string>
 
     <plurals name="confirm_delete_bookmark_count">

@@ -23,6 +23,7 @@ import java.io.InputStream;
 
 import itkach.aard2.MainActivity;
 import itkach.aard2.R;
+import itkach.aard2.dictionaries.DictionaryFolderManager;
 import itkach.aard2.utils.Utils;
 import itkach.aard2.widget.RecyclerView;
 
@@ -86,24 +87,15 @@ public class SettingsFragment extends Fragment {
                 if (uri == null) {
                     return;
                 }
-                try {
-                    // Take persistable URI permission
-                    requireActivity().getContentResolver().takePersistableUriPermission(uri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    
-                    // Save the folder URI
-                    AppPrefs.setAutoLoadDictFolderUri(uri.toString());
-                    
-                    // Refresh the settings to show the selected folder
-                    if (recyclerView != null && recyclerView.getAdapter() != null) {
-                        recyclerView.getAdapter().notifyDataSetChanged();
-                    }
-                    
-                    Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
-                } catch (Exception e) {
-                    Log.e(TAG, "Failed to set auto-load folder", e);
-                    Toast.makeText(requireActivity(), R.string.msg_failed_to_select_folder, Toast.LENGTH_LONG).show();
+                // Use DictionaryFolderManager singleton which handles everything
+                DictionaryFolderManager.getInstance(requireContext()).setAutoLoadFolder(uri, null);
+                
+                // Refresh the settings to show the selected folder
+                if (recyclerView != null && recyclerView.getAdapter() != null) {
+                    recyclerView.getAdapter().notifyDataSetChanged();
                 }
+                
+                Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
             });
 
     @Nullable
@@ -141,5 +133,17 @@ public class SettingsFragment extends Fragment {
             Log.d(TAG, "Failed to launch folder chooser", e);
             Toast.makeText(requireActivity(), R.string.msg_no_activity_to_select_folder, Toast.LENGTH_LONG).show();
         }
+    }
+    
+    public void clearAutoLoadFolder() {
+        // Use DictionaryFolderManager singleton which handles everything
+        DictionaryFolderManager.getInstance(requireContext()).clearAutoLoadFolder(null);
+        
+        // Refresh the settings to show the cleared folder
+        if (recyclerView != null && recyclerView.getAdapter() != null) {
+            recyclerView.getAdapter().notifyDataSetChanged();
+        }
+        
+        Toast.makeText(requireActivity(), R.string.msg_folder_cleared, Toast.LENGTH_SHORT).show();
     }
 }
