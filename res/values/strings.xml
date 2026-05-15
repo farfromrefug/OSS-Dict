@@ -107,7 +107,6 @@
     <string name="msg_move_to_auto_load_folder_hint">Tip: Move dictionary files to your auto-load folder for automatic management</string>
     <string name="dialog_clear_auto_load_folder_title">Clear Auto-Load Folder?</string>
     <string name="dialog_clear_auto_load_folder_message">All dictionaries loaded from this folder will be removed from the app. This action cannot be undone.</string>
-    <string name="action_clear">Clear</string>
     
     <!-- Dictionary scan notifications -->
     <string name="notification_channel_dictionary_scan">Dictionary Scanning</string>

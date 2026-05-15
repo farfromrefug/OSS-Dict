@@ -131,15 +131,17 @@ public class DictionaryFolderManager {
         for (DictionaryScanner.DictionaryFileSet fileSet : scanResult.dictionaries) {
             currentIndex++;
             String fileUri = fileSet.mainFile.getUri().toString();
-            String dictName = fileSet.mainFile.getName();
             
             // Notify progress
-            if (progressCallback != null && dictName != null) {
-                final int current = currentIndex;
-                final int total = totalDicts;
-                final String name = dictName;
-                ThreadUtils.postOnMainThread(() -> 
-                    progressCallback.onDictionaryLoading(name, current, total));
+            if (progressCallback != null) {
+                String dictName = fileSet.mainFile.getName();
+                if (dictName != null) {
+                    final int current = currentIndex;
+                    final int total = totalDicts;
+                    final String name = dictName;
+                    ThreadUtils.postOnMainThread(() -> 
+                        progressCallback.onDictionaryLoading(name, current, total));
+                }
             }
             
             // Check if this file URI is already tracked
