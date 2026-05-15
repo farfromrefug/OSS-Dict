@@ -24,11 +24,19 @@ public class DictionaryScanNotification {
     private final Context context;
     private final NotificationManager notificationManager;
     private final NotificationCompat.Builder builder;
+    private boolean canShowNotifications = true;
     
     public DictionaryScanNotification(@NonNull Context context) {
         this.context = context.getApplicationContext();
         this.notificationManager = (NotificationManager) 
                 context.getSystemService(Context.NOTIFICATION_SERVICE);
+        
+        // Check if we can show notifications (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            canShowNotifications = androidx.core.content.ContextCompat.checkSelfPermission(
+                    context, android.Manifest.permission.POST_NOTIFICATIONS) 
+                    == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        }
         
         createNotificationChannel();
         
@@ -69,6 +77,10 @@ public class DictionaryScanNotification {
      * Shows the notification indicating scan has started.
      */
     public void showScanStarted() {
+        if (!canShowNotifications) {
+            android.util.Log.d("DictionaryScanNotification", "Cannot show notification - permission not granted");
+            return;
+        }
         builder.setContentText(context.getString(R.string.notification_scanning_starting))
                 .setProgress(0, 0, true);
         notificationManager.notify(NOTIFICATION_ID, builder.build());
@@ -82,6 +94,9 @@ public class DictionaryScanNotification {
      * @param total Total number of dictionaries
      */
     public void updateProgress(@NonNull String dictionaryName, int current, int total) {
+        if (!canShowNotifications) {
+            return;
+        }
         String text = context.getString(R.string.notification_loading_dictionary, 
                 dictionaryName, current, total);
         builder.setContentText(text)
@@ -96,6 +111,9 @@ public class DictionaryScanNotification {
      * @param removedCount Number of dictionaries removed
      */
     public void showCompleted(int addedCount, int removedCount) {
+        if (!canShowNotifications) {
+            return;
+        }
         String text;
         if (addedCount > 0 && removedCount > 0) {
             text = context.getString(R.string.notification_scan_completed_both, 

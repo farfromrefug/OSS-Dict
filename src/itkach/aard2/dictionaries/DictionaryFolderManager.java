@@ -430,9 +430,38 @@ public class DictionaryFolderManager {
     @WorkerThread
     private void clearAutoLoadedDictionaries() {
         Set<String> idsToRemove = new HashSet<>(autoLoadedDictionaries.keySet());
-        for (String dictId : idsToRemove) {
-            removeDictionary(dictId);
+        
+        if (idsToRemove.isEmpty()) {
+            return;
         }
+        
+        // Batch removal to avoid RecyclerView inconsistency
+        dictionaries.beginUpdate();
+        try {
+            for (String dictId : idsToRemove) {
+                SlobDescriptor descriptor = findDescriptorById(dictId);
+                if (descriptor != null) {
+                    int index = dictionaries.indexOf(descriptor);
+                    if (index >= 0) {
+                        dictionaries.remove(index);
+                        
+                        // Clean up persisted data in background
+                        ThreadUtils.postOnBackgroundThread(() -> {
+                            try {
+                                descriptor.cleanupPersistedData(context);
+                            } catch (Exception e) {
+                                Log.w(TAG, "Failed to clean up persisted data for " + descriptor.path, e);
+                            }
+                        });
+                        
+                        Log.d(TAG, "Removed dictionary: " + descriptor.getLabel());
+                    }
+                }
+            }
+        } finally {
+            dictionaries.endUpdate(true);
+        }
+        
         autoLoadedDictionaries.clear();
         brokenDictionaries.clear();
         Log.d(TAG, "Cleared " + idsToRemove.size() + " auto-loaded dictionaries");
