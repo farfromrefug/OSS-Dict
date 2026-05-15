@@ -29,6 +29,7 @@ import itkach.aard2.MainActivity;
 import itkach.aard2.R;
 import itkach.aard2.SlobHelper;
 import itkach.aard2.descriptor.SlobDescriptor;
+import itkach.aard2.prefs.AppPrefs;
 
 public class DictionaryListFragment extends BaseListFragment {
     private final static String TAG = DictionaryListFragment.class.getSimpleName();
@@ -60,16 +61,32 @@ public class DictionaryListFragment extends BaseListFragment {
                 viewModel.updateDictionary(uri);
             });
     private final ActivityResultLauncher<Intent> folderSelector = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result == null || result.getResultCode() != Activity.RESULT_OK) {
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result == null || result.getResultCode() != android.app.Activity.RESULT_OK) {
                     return;
                 }
-                Intent intent = result.getData();
-                Uri uri = intent != null ? intent.getData() : null;
+                android.content.Intent intent = result.getData();
+                if (intent == null) {
+                    return;
+                }
+                Uri uri = intent.getData();
                 if (uri == null) {
                     return;
                 }
-                viewModel.setAutoLoadFolder(uri);
+                try {
+                    // Take persistable URI permission
+                    requireActivity().getContentResolver().takePersistableUriPermission(uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+                    // Save the folder URI
+                    AppPrefs.setAutoLoadDictFolderUri(uri.toString());
+
+                    Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to set auto-load folder", e);
+                    Toast.makeText(requireActivity(), R.string.msg_failed_to_select_folder, Toast.LENGTH_LONG).show();
+                }
             });
 
     @DrawableRes

@@ -149,8 +149,8 @@ public class DictionaryFolderManager {
             Uri uri = fileSet.mainFile.getUri();
             
             // Take persistable URI permission
-            context.getContentResolver().takePersistableUriPermission(uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
+//            context.getContentResolver().takePersistableUriPermission(uri,
+//                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
             
             // Create descriptor and load dictionary
             SlobDescriptor descriptor = new SlobDescriptor();
