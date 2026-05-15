@@ -80,40 +80,49 @@ public class DictionaryFolderManager {
     private boolean syncDictionaries(@NonNull DictionaryScanner.ScanResult scanResult) {
         boolean changed = false;
         Set<String> currentAutoLoadIds = new HashSet<>(autoLoadedDictionaries.keySet());
-        Set<String> scannedIds = scanResult.foundIds;
 
         // Process each scanned dictionary
         for (DictionaryScanner.DictionaryFileSet fileSet : scanResult.dictionaries) {
-            String id = fileSet.id;
+            String fileUri = fileSet.mainFile.getUri().toString();
             
-            // Check if dictionary is already loaded
-            boolean alreadyLoaded = autoLoadedDictionaries.containsKey(id);
+            // Check if this file URI is already tracked
+            boolean alreadyLoaded = autoLoadedDictionaries.containsValue(fileUri);
             
             if (fileSet.isComplete) {
                 // Dictionary has all required files
                 if (!alreadyLoaded) {
                     // New dictionary - add it
-                    if (addDictionary(fileSet)) {
-                        autoLoadedDictionaries.put(id, fileSet.mainFile.getUri().toString());
+                    String dictId = addDictionary(fileSet);
+                    if (dictId != null) {
+                        autoLoadedDictionaries.put(dictId, fileUri);
                         changed = true;
                     }
-                } else if (brokenDictionaries.containsKey(id)) {
-                    // Previously broken dictionary is now fixed - update it
-                    brokenDictionaries.remove(id);
-                    if (updateDictionary(fileSet)) {
-                        changed = true;
+                } else {
+                    // Find the dictionary ID for this file URI
+                    String dictId = findDictIdByFileUri(fileUri);
+                    if (dictId != null) {
+                        if (brokenDictionaries.containsKey(dictId)) {
+                            // Previously broken dictionary is now fixed - update it
+                            brokenDictionaries.remove(dictId);
+                            if (updateDictionary(fileSet)) {
+                                changed = true;
+                            }
+                        }
+                        currentAutoLoadIds.remove(dictId);
                     }
                 }
-                currentAutoLoadIds.remove(id);
             } else {
                 // Dictionary is missing required files (broken)
-                if (alreadyLoaded && !brokenDictionaries.containsKey(id)) {
+                String dictId = findDictIdByFileUri(fileUri);
+                if (dictId != null && alreadyLoaded && !brokenDictionaries.containsKey(dictId)) {
                     // Dictionary was complete, now broken - mark as broken
-                    markDictionaryAsBroken(id, fileSet);
-                    brokenDictionaries.put(id, fileSet.files.size());
+                    markDictionaryAsBroken(dictId, fileSet);
+                    brokenDictionaries.put(dictId, fileSet.files.size());
                     changed = true;
                 }
-                currentAutoLoadIds.remove(id);
+                if (dictId != null) {
+                    currentAutoLoadIds.remove(dictId);
+                }
             }
         }
 
@@ -131,9 +140,11 @@ public class DictionaryFolderManager {
 
     /**
      * Adds a new dictionary from the scanned file set.
+     * @return The dictionary ID if successfully added, null otherwise
      */
     @WorkerThread
-    private boolean addDictionary(@NonNull DictionaryScanner.DictionaryFileSet fileSet) {
+    @Nullable
+    private String addDictionary(@NonNull DictionaryScanner.DictionaryFileSet fileSet) {
         try {
             Uri uri = fileSet.mainFile.getUri();
             
@@ -148,17 +159,17 @@ public class DictionaryFolderManager {
             descriptor.loadDictionary(context);
             
             // Check if dictionary with this ID already exists
-            if (!dictionaries.hasId(descriptor.id)) {
+            if (descriptor.id != null && !dictionaries.hasId(descriptor.id)) {
                 dictionaries.add(descriptor);
-                Log.d(TAG, "Added dictionary: " + descriptor.getLabel() + " (format: " + fileSet.format + ")");
-                return true;
+                Log.d(TAG, "Added dictionary: " + descriptor.getLabel() + " (format: " + fileSet.format + ", id: " + descriptor.id + ")");
+                return descriptor.id;
             } else {
-                Log.d(TAG, "Dictionary already exists: " + descriptor.id);
-                return false;
+                Log.d(TAG, "Dictionary already exists or failed to load: " + descriptor.id);
+                return null;
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to add dictionary: " + fileSet.mainFile.getUri(), e);
-            return false;
+            return null;
         }
     }
 
@@ -168,10 +179,15 @@ public class DictionaryFolderManager {
     @WorkerThread
     private boolean updateDictionary(@NonNull DictionaryScanner.DictionaryFileSet fileSet) {
         try {
-            String id = fileSet.id;
+            String fileUri = fileSet.mainFile.getUri().toString();
+            String dictId = findDictIdByFileUri(fileUri);
+            
+            if (dictId == null) {
+                return false;
+            }
             
             // Find existing descriptor
-            SlobDescriptor existing = findDescriptorById(id);
+            SlobDescriptor existing = findDescriptorById(dictId);
             if (existing == null) {
                 return false;
             }
@@ -196,8 +212,8 @@ public class DictionaryFolderManager {
      * Marks a dictionary as broken (missing files).
      */
     @WorkerThread
-    private void markDictionaryAsBroken(@NonNull String id, @NonNull DictionaryScanner.DictionaryFileSet fileSet) {
-        SlobDescriptor descriptor = findDescriptorById(id);
+    private void markDictionaryAsBroken(@NonNull String dictId, @NonNull DictionaryScanner.DictionaryFileSet fileSet) {
+        SlobDescriptor descriptor = findDescriptorById(dictId);
         if (descriptor != null) {
             descriptor.error = "Dictionary files are incomplete or missing";
             descriptor.active = false;
@@ -211,8 +227,8 @@ public class DictionaryFolderManager {
      * Removes a dictionary that's no longer in the folder.
      */
     @WorkerThread
-    private boolean removeDictionary(@NonNull String id) {
-        SlobDescriptor descriptor = findDescriptorById(id);
+    private boolean removeDictionary(@NonNull String dictId) {
+        SlobDescriptor descriptor = findDescriptorById(dictId);
         if (descriptor != null) {
             int index = dictionaries.indexOf(descriptor);
             if (index >= 0) {
@@ -233,13 +249,26 @@ public class DictionaryFolderManager {
     }
 
     /**
-     * Finds a descriptor by its ID (path-based matching for auto-loaded dictionaries).
+     * Finds a descriptor by its dictionary ID.
      */
     @Nullable
-    private SlobDescriptor findDescriptorById(@NonNull String id) {
+    private SlobDescriptor findDescriptorById(@NonNull String dictId) {
         for (SlobDescriptor desc : dictionaries.getList()) {
-            if (id.equals(desc.path) || id.equals(autoLoadedDictionaries.get(desc.path))) {
+            if (dictId.equals(desc.id)) {
                 return desc;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Finds the dictionary ID for a given file URI.
+     */
+    @Nullable
+    private String findDictIdByFileUri(@NonNull String fileUri) {
+        for (Map.Entry<String, String> entry : autoLoadedDictionaries.entrySet()) {
+            if (fileUri.equals(entry.getValue())) {
+                return entry.getKey();
             }
         }
         return null;
