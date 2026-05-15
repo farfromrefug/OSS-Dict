@@ -104,6 +104,24 @@
     <string name="dialog_clear_auto_load_folder_title">Clear Auto-Load Folder?</string>
     <string name="dialog_clear_auto_load_folder_message">All dictionaries loaded from this folder will be removed from the app. This action cannot be undone.</string>
     <string name="action_clear">Clear</string>
+    
+    <!-- Dictionary scan notifications -->
+    <string name="notification_channel_dictionary_scan">Dictionary Scanning</string>
+    <string name="notification_channel_dictionary_scan_desc">Shows progress when scanning dictionary folder</string>
+    <string name="notification_scanning_dictionaries">Scanning Dictionaries</string>
+    <string name="notification_scanning_starting">Starting scan…</string>
+    <string name="notification_loading_dictionary">Loading %1$s (%2$d/%3$d)</string>
+    <string name="notification_scan_completed_both">Added %1$d, removed %2$d dictionaries</string>
+    <string name="notification_scan_completed_no_changes">No changes detected</string>
+    <plurals name="notification_scan_completed_added">
+        <item quantity="one">Added %d dictionary</item>
+        <item quantity="other">Added %d dictionaries</item>
+    </plurals>
+    <plurals name="notification_scan_completed_removed">
+        <item quantity="one">Removed %d dictionary</item>
+        <item quantity="other">Removed %d dictionaries</item>
+    </plurals>
+    
     <string name="delete">Delete</string>
 
     <plurals name="confirm_delete_bookmark_count">

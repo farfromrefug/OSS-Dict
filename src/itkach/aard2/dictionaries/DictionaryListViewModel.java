@@ -140,19 +140,41 @@ public class DictionaryListViewModel extends AndroidViewModel {
     }
 
     /**
-     * Sets the auto-load folder and triggers a scan.
+     * Sets the auto-load folder and triggers a scan with progress notifications.
      */
     public void setAutoLoadFolder(@NonNull Uri folderUri) {
-        DictionaryFolderManager.getInstance(getApplication()).setAutoLoadFolder(folderUri, isLoading -> {
-            if (isLoading) {
-                loadingCount.incrementAndGet();
-                this.isLoading.postValue(true);
-            } else {
-                if (loadingCount.decrementAndGet() == 0) {
-                    this.isLoading.postValue(false);
-                }
-            }
-        });
+        DictionaryScanNotification notification = new DictionaryScanNotification(getApplication());
+        
+        DictionaryFolderManager.getInstance(getApplication()).setAutoLoadFolder(
+                folderUri,
+                // Loading callback
+                isLoading -> {
+                    if (isLoading) {
+                        loadingCount.incrementAndGet();
+                        this.isLoading.postValue(true);
+                    } else {
+                        if (loadingCount.decrementAndGet() == 0) {
+                            this.isLoading.postValue(false);
+                        }
+                    }
+                },
+                // Progress callback
+                new DictionaryFolderManager.ProgressCallback() {
+                    @Override
+                    public void onScanStarted() {
+                        notification.showScanStarted();
+                    }
+
+                    @Override
+                    public void onDictionaryLoading(String dictionaryName, int current, int total) {
+                        notification.updateProgress(dictionaryName, current, total);
+                    }
+
+                    @Override
+                    public void onScanCompleted(int addedCount, int removedCount) {
+                        notification.showCompleted(addedCount, removedCount);
+                    }
+                });
     }
     
     /**
