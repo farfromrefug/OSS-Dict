@@ -45,24 +45,24 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     private final View.OnClickListener onDeleteUserStyle;
     private final Fragment fragment;
 
-    final static int POS_UI_THEME = 0;
-    final static int POS_FORCE_DARK = 1;
-    final static int POS_REMOTE_CONTENT = 2;
-    final static int POS_REMOTE_CONTENT_CACHE = 3;
-    final static int POS_FAV_RANDOM = 4;
-    final static int POS_USE_VOLUME_FOR_NAV = 5;
-    final static int POS_SHOW_KEYBOARD_LOOKUP = 6;
-    final static int POS_AUTO_PASTE = 7;
-    final static int POS_DISABLE_RANDOM_LOOKUP = 8;
-    final static int POS_DISABLE_BOOKMARKS = 9;
-    final static int POS_DISABLE_HISTORY = 10;
-    final static int POS_DISABLE_TAB_LABELS = 11;
-    final static int POS_DISABLE_JS = 12;
-    final static int POS_USER_STYLES = 13;
-    final static int POS_CLEAR_CACHE = 14;
-    final static int POS_ABOUT = 15;
-    final static int POS_OPEN_MISSING_BROWSER = 16;
-    final static int POS_AUTO_LOAD_FOLDER = 17;
+    final static int POS_AUTO_LOAD_FOLDER = 0;
+    final static int POS_UI_THEME = 1;
+    final static int POS_FORCE_DARK = 2;
+    final static int POS_REMOTE_CONTENT = 3;
+    final static int POS_REMOTE_CONTENT_CACHE = 4;
+    final static int POS_FAV_RANDOM = 5;
+    final static int POS_USE_VOLUME_FOR_NAV = 6;
+    final static int POS_SHOW_KEYBOARD_LOOKUP = 7;
+    final static int POS_AUTO_PASTE = 8;
+    final static int POS_DISABLE_RANDOM_LOOKUP = 9;
+    final static int POS_DISABLE_BOOKMARKS = 10;
+    final static int POS_DISABLE_HISTORY = 11;
+    final static int POS_DISABLE_TAB_LABELS = 12;
+    final static int POS_DISABLE_JS = 13;
+    final static int POS_USER_STYLES = 14;
+    final static int POS_CLEAR_CACHE = 15;
+    final static int POS_ABOUT = 16;
+    final static int POS_OPEN_MISSING_BROWSER = 17;
 
     SettingsListAdapter(Fragment fragment) {
         this.fragment = fragment;

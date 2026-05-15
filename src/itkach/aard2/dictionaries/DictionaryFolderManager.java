@@ -183,7 +183,7 @@ public class DictionaryFolderManager {
             existing.loadDictionary(context);
             
             // Notify changes
-            dictionaries.notifyDataSetChanged();
+            dictionaries.notifyChanged();
             Log.d(TAG, "Updated dictionary: " + existing.getLabel());
             return true;
         } catch (Exception e) {
@@ -202,7 +202,7 @@ public class DictionaryFolderManager {
             descriptor.error = "Dictionary files are incomplete or missing";
             descriptor.active = false;
             descriptor.expandDetail = true;
-            dictionaries.notifyDataSetChanged();
+            dictionaries.notifyChanged();
             Log.w(TAG, "Marked dictionary as broken: " + descriptor.getLabel());
         }
     }

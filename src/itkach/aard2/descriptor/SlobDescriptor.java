@@ -48,7 +48,7 @@ public class SlobDescriptor extends BaseDescriptor {
     @SuppressWarnings("FieldCanBeLocal")
     private transient ParcelFileDescriptor fileDescriptor;
 
-    private SlobDescriptor() {
+    public SlobDescriptor() {
     }
 
     // -----------------------------------------------------------------------

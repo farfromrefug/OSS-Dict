@@ -220,6 +220,20 @@ public class DictionaryListFragment extends BaseListFragment {
         }
     }
 
+    public void selectDictionaryFolder() {
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try {
+            folderSelector.launch(intent);
+        } catch (ActivityNotFoundException e) {
+            Log.d(TAG, "Not activity to get content", e);
+            Toast.makeText(getContext(), R.string.msg_no_activity_to_get_content, Toast.LENGTH_LONG).show();
+        }
+    }
+
     public void updateDictionary(@NonNull SlobDescriptor sd) {
         viewModel.setDictionaryToBeReplaced(sd);
         Intent intent = new Intent();
