@@ -49,7 +49,7 @@ public class DictionaryScanNotification {
         
         // Build notification
         builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.dictionary)
+                .setSmallIcon(R.drawable.dictionary_monochrome)
                 .setContentTitle(context.getString(R.string.notification_scanning_dictionaries))
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)

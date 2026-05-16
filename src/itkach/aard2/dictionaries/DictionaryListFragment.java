@@ -166,14 +166,13 @@ public class DictionaryListFragment extends BaseListFragment {
                 selectFolderButton.setTag("select_folder_button");
                 selectFolderButton.setOnClickListener(v -> selectDictionaryFolder());
                 
-                // Add some margin
+                // Add some margin and center the button
                 LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 );
                 params.topMargin = (int) (24 * getResources().getDisplayMetrics().density);
-                params.gravity = Gravity.CENTER;
-                params.weight = 1.0f;
+                params.gravity = Gravity.CENTER_HORIZONTAL;
                 selectFolderButton.setLayoutParams(params);
                 containerGroup.addView(selectFolderButton);
             }
@@ -210,9 +209,18 @@ public class DictionaryListFragment extends BaseListFragment {
         viewModel.isLoading.observe(getViewLifecycleOwner(), loading -> {
             if (Boolean.TRUE.equals(loading)) {
                 if (loadingSnackbar == null || !loadingSnackbar.isShown()) {
-                    loadingSnackbar = Snackbar.make(view,
+                    // Anchor snackbar to recyclerView so it appears above the FAB
+                    loadingSnackbar = Snackbar.make(recyclerView,
                             R.string.msg_loading_dictionary,
                             Snackbar.LENGTH_INDEFINITE);
+                    // Set anchor to FAB if available
+                    FragmentActivity activity = requireActivity();
+                    if (activity instanceof MainActivity) {
+                        View fab = activity.findViewById(R.id.fab);
+                        if (fab != null && fab.getVisibility() == View.VISIBLE) {
+                            loadingSnackbar.setAnchorView(fab);
+                        }
+                    }
                     loadingSnackbar.show();
                 }
             } else {
