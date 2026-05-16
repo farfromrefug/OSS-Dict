@@ -172,8 +172,13 @@ public class DictionaryListFragment extends BaseListFragment {
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 );
                 params.topMargin = (int) (24 * getResources().getDisplayMetrics().density);
-                params.gravity = Gravity.CENTER_HORIZONTAL;
                 selectFolderButton.setLayoutParams(params);
+                
+                // Center the button by setting gravity on the parent if it's a LinearLayout
+                if (containerGroup instanceof LinearLayout) {
+                    ((LinearLayout) containerGroup).setGravity(Gravity.CENTER_HORIZONTAL);
+                }
+                
                 containerGroup.addView(selectFolderButton);
             }
         }
@@ -209,11 +214,12 @@ public class DictionaryListFragment extends BaseListFragment {
         viewModel.isLoading.observe(getViewLifecycleOwner(), loading -> {
             if (Boolean.TRUE.equals(loading)) {
                 if (loadingSnackbar == null || !loadingSnackbar.isShown()) {
-                    // Anchor snackbar to recyclerView so it appears above the FAB
-                    loadingSnackbar = Snackbar.make(recyclerView,
+                    // Use the root view for snackbar to ensure it's always attached
+                    View rootView = view;
+                    loadingSnackbar = Snackbar.make(rootView,
                             R.string.msg_loading_dictionary,
                             Snackbar.LENGTH_INDEFINITE);
-                    // Set anchor to FAB if available
+                    // Set anchor to FAB if available to position above it
                     FragmentActivity activity = requireActivity();
                     if (activity instanceof MainActivity) {
                         View fab = activity.findViewById(R.id.fab);
