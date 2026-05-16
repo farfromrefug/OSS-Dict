@@ -1,6 +1,7 @@
 package itkach.aard2.prefs;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,10 +14,13 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
+
+import com.google.android.material.snackbar.Snackbar;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -73,6 +77,22 @@ public class SettingsFragment extends Fragment {
                 }
             });
 
+    @Nullable private Uri pendingAutoLoadUri;
+    private final ActivityResultLauncher<String> requestNotificationPermission =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    if (pendingAutoLoadUri != null) {
+                        DictionaryFolderManager.getInstance(requireContext()).setAutoLoadFolder(pendingAutoLoadUri, null);
+                        pendingAutoLoadUri = null;
+                        Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(requireActivity(), R.string.msg_permission_denied_notifications, Toast.LENGTH_LONG).show();
+                    pendingAutoLoadUri = null;
+                }
+            });
+
+
     public final ActivityResultLauncher<Intent> autoLoadFolderChooser = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -87,8 +107,32 @@ public class SettingsFragment extends Fragment {
                 if (uri == null) {
                     return;
                 }
-                // Use DictionaryFolderManager singleton which handles everything
-                DictionaryFolderManager.getInstance(requireContext()).setAutoLoadFolder(uri, null);
+
+                // If API < 33 we don't need runtime POST_NOTIFICATIONS permission
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+                    DictionaryFolderManager.getInstance(requireContext()).setAutoLoadFolder(uri, null);
+                    Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // For API 33+, check permission
+                if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.POST_NOTIFICATIONS)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    DictionaryFolderManager.getInstance(requireContext()).setAutoLoadFolder(uri, null);
+                    Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                } else {
+                    // store the uri and request permission; on grant we'll call setAutoLoadFolder
+                    pendingAutoLoadUri = uri;
+
+                    // Optionally show rationale
+                    if (shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS)) {
+                        Snackbar.make(requireView(), R.string.rationale_notifications_needed, Snackbar.LENGTH_LONG)
+                                .setAction(R.string.action_allow, v -> requestNotificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS))
+                                .show();
+                    } else {
+                        requestNotificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS);
+                    }
+                }
                 
                 // Refresh the settings to show the selected folder and enable auto-move
                 if (recyclerView != null && recyclerView.getAdapter() != null) {

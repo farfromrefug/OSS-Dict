@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 
 import itkach.aard2.SlobDescriptorList;
+import itkach.aard2.SlobHelper;
 import itkach.aard2.descriptor.SlobDescriptor;
 import itkach.aard2.prefs.AppPrefs;
 import itkach.aard2.utils.ThreadUtils;

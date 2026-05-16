@@ -106,6 +106,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_FORCE_DARK:
             case POS_FAV_RANDOM:
             case POS_USE_VOLUME_FOR_NAV:
+            case POS_AUTO_MOVE_TO_FOLDER:
             case POS_AUTO_PASTE:
             case POS_DISABLE_BOOKMARKS:
             case POS_DISABLE_HISTORY:

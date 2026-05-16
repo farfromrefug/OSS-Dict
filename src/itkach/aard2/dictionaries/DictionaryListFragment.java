@@ -3,11 +3,15 @@ package itkach.aard2.dictionaries;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -15,6 +19,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProvider;
 import android.text.Spanned;
@@ -60,6 +65,22 @@ public class DictionaryListFragment extends BaseListFragment {
                 }
                 viewModel.updateDictionary(uri);
             });
+
+    @Nullable private Uri pendingAutoLoadUri;
+    private final ActivityResultLauncher<String> requestNotificationPermission =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    if (pendingAutoLoadUri != null) {
+                        viewModel.setAutoLoadFolder(pendingAutoLoadUri);
+                        pendingAutoLoadUri = null;
+                        Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(requireActivity(), R.string.msg_permission_denied_notifications, Toast.LENGTH_LONG).show();
+                    pendingAutoLoadUri = null;
+                }
+            });
+
     private final ActivityResultLauncher<Intent> folderSelector = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -74,9 +95,31 @@ public class DictionaryListFragment extends BaseListFragment {
                 if (uri == null) {
                     return;
                 }
-                // Use the ViewModel method which handles everything
-                viewModel.setAutoLoadFolder(uri);
-                Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                // If API < 33 we don't need runtime POST_NOTIFICATIONS permission
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+                    viewModel.setAutoLoadFolder(uri);
+                    Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // For API 33+, check permission
+                if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.POST_NOTIFICATIONS)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    viewModel.setAutoLoadFolder(uri);
+                    Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                } else {
+                    // store the uri and request permission; on grant we'll call setAutoLoadFolder
+                    pendingAutoLoadUri = uri;
+
+                    // Optionally show rationale
+                    if (shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS)) {
+                        Snackbar.make(requireView(), R.string.rationale_notifications_needed, Snackbar.LENGTH_LONG)
+                                .setAction(R.string.action_allow, v -> requestNotificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS))
+                                .show();
+                    } else {
+                        requestNotificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS);
+                    }
+                }
             });
 
     @DrawableRes
@@ -124,13 +167,14 @@ public class DictionaryListFragment extends BaseListFragment {
                 selectFolderButton.setOnClickListener(v -> selectDictionaryFolder());
                 
                 // Add some margin
-                ViewGroup.MarginLayoutParams params = new ViewGroup.MarginLayoutParams(
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 );
                 params.topMargin = (int) (24 * getResources().getDisplayMetrics().density);
+                params.gravity = Gravity.CENTER;
+                params.weight = 1.0f;
                 selectFolderButton.setLayoutParams(params);
-                
                 containerGroup.addView(selectFolderButton);
             }
         }
@@ -228,11 +272,8 @@ public class DictionaryListFragment extends BaseListFragment {
     }
 
     public void selectDictionaryFolder() {
-        Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         try {
             folderSelector.launch(intent);
         } catch (ActivityNotFoundException e) {
