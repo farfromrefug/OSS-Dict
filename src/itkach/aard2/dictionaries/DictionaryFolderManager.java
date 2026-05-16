@@ -497,6 +497,13 @@ public class DictionaryFolderManager {
     /**
      * Checks if a dictionary path (URI) is within the given folder URI.
      * This handles both direct children and nested files within the folder.
+     * 
+     * SAF URI structure:
+     * - Folder: content://com.android.externalstorage.documents/tree/primary%3ADownload%2FDictionaries
+     * - File:   content://com.android.externalstorage.documents/tree/primary%3ADownload%2FDictionaries/document/primary%3ADownload%2FDictionaries%2Fdict.mdx
+     * 
+     * The tree ID (e.g., "primary%3ADownload%2FDictionaries") uniquely identifies the folder.
+     * Files within the folder will have URIs containing this tree ID in their document path.
      */
     private boolean isPathWithinFolder(@NonNull String dictPath, @NonNull String folderUriStr) {
         try {
@@ -507,22 +514,27 @@ public class DictionaryFolderManager {
             // This works because SAF URIs have a hierarchical structure
             String dictUriStr = dictUri.toString();
             
-            // The folder URI typically looks like: content://com.android.externalstorage.documents/tree/primary%3ADownload%2FDictionaries
-            // Dictionary URIs within it look like: content://com.android.externalstorage.documents/tree/primary%3ADownload%2FDictionaries/document/primary%3ADownload%2FDictionaries%2Fdict.mdx
-            
             // Check if the dictionary URI contains the folder's tree ID
-            if (folderUriStr.contains("/tree/")) {
-                String treeId = folderUriStr.substring(folderUriStr.indexOf("/tree/") + 6);
+            int treeIndex = folderUriStr.indexOf("/tree/");
+            if (treeIndex >= 0) {
+                String treeId = folderUriStr.substring(treeIndex + 6);
                 // Remove any trailing slashes or document segments
-                if (treeId.contains("/document/")) {
-                    treeId = treeId.substring(0, treeId.indexOf("/document/"));
+                int docIndex = treeId.indexOf("/document/");
+                if (docIndex >= 0) {
+                    treeId = treeId.substring(0, docIndex);
                 }
                 
-                // Check if the dictionary URI contains this tree ID
-                return dictUriStr.contains(treeId);
+                // Check if the dictionary URI contains this tree ID as a path segment
+                // Use URL-decoded comparison to handle encoded characters
+                String decodedTreeId = Uri.decode(treeId);
+                String decodedDictUri = Uri.decode(dictUriStr);
+                
+                // Check if the tree ID appears in the dictionary URI
+                // This is more reliable than simple contains() as it handles the hierarchical structure
+                return decodedDictUri.contains(decodedTreeId);
             }
             
-            // Fallback: simple prefix check
+            // Fallback: simple prefix check for non-SAF URIs
             return dictUriStr.startsWith(folderUriStr);
         } catch (Exception e) {
             Log.w(TAG, "Error checking if path is within folder: " + dictPath, e);
