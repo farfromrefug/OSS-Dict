@@ -9,8 +9,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -427,36 +429,60 @@ public class DictionaryFolderManager {
     
     /**
      * Removes all dictionaries that were auto-loaded from the folder.
+     * This method checks each dictionary's path to determine if it's within the library folder,
+     * making it work correctly even after app restarts when the in-memory map is empty.
      */
     @WorkerThread
     private void clearAutoLoadedDictionaries() {
-        Set<String> idsToRemove = new HashSet<>(autoLoadedDictionaries.keySet());
-        
-        if (idsToRemove.isEmpty()) {
+        // Get the library folder URI
+        String folderUriStr = AppPrefs.getAutoLoadDictFolderUri();
+        if (folderUriStr.isEmpty()) {
+            // No folder set, but clear the maps anyway
+            autoLoadedDictionaries.clear();
+            brokenDictionaries.clear();
             return;
         }
+        
+        // Find all dictionaries within the library folder
+        List<SlobDescriptor> descriptorsToRemove = new ArrayList<>();
+        for (int i = 0; i < dictionaries.size(); i++) {
+            SlobDescriptor descriptor = dictionaries.get(i);
+            if (descriptor != null && descriptor.path != null) {
+                // Check if this dictionary's path is within the library folder
+                if (isPathWithinFolder(descriptor.path, folderUriStr)) {
+                    descriptorsToRemove.add(descriptor);
+                }
+            }
+        }
+        
+        if (descriptorsToRemove.isEmpty()) {
+            Log.d(TAG, "No dictionaries to remove from library folder");
+            autoLoadedDictionaries.clear();
+            brokenDictionaries.clear();
+            return;
+        }
+        
+        Log.d(TAG, "Found " + descriptorsToRemove.size() + " dictionaries to remove from library folder");
         
         // Batch removal to avoid RecyclerView inconsistency
         dictionaries.beginUpdate();
         try {
-            for (String dictId : idsToRemove) {
-                SlobDescriptor descriptor = findDescriptorById(dictId);
-                if (descriptor != null) {
-                    int index = dictionaries.indexOf(descriptor);
-                    if (index >= 0) {
-                        dictionaries.remove(index);
-                        
-                        // Clean up persisted data in background
-                        ThreadUtils.postOnBackgroundThread(() -> {
-                            try {
-                                descriptor.cleanupPersistedData(context);
-                            } catch (Exception e) {
-                                Log.w(TAG, "Failed to clean up persisted data for " + descriptor.path, e);
-                            }
-                        });
-                        
-                        Log.d(TAG, "Removed dictionary: " + descriptor.getLabel());
-                    }
+            for (SlobDescriptor descriptor : descriptorsToRemove) {
+                int index = dictionaries.indexOf(descriptor);
+                if (index >= 0) {
+                    dictionaries.remove(index);
+                    
+                    // Clean up persisted data (StarDict extracted files, MDict cache, etc.)
+                    final SlobDescriptor descriptorCopy = descriptor;
+                    ThreadUtils.postOnBackgroundThread(() -> {
+                        try {
+                            descriptorCopy.cleanupPersistedData(context);
+                        } catch (Exception e) {
+                            Log.w(TAG, "Failed to clean up persisted data for " + descriptorCopy.path, e);
+                        }
+                    });
+                    
+                    Log.d(TAG, "Removed dictionary: " + descriptor.getLabel() + " (" + descriptor.path + ")");
                 }
             }
         } finally {
@@ -465,7 +491,43 @@ public class DictionaryFolderManager {
         
         autoLoadedDictionaries.clear();
         brokenDictionaries.clear();
-        Log.d(TAG, "Cleared " + idsToRemove.size() + " auto-loaded dictionaries");
+        Log.d(TAG, "Cleared " + descriptorsToRemove.size() + " dictionaries from library folder");
+    }
+    
+    /**
+     * Checks if a dictionary path (URI) is within the given folder URI.
+     * This handles both direct children and nested files within the folder.
+     */
+    private boolean isPathWithinFolder(@NonNull String dictPath, @NonNull String folderUriStr) {
+        try {
+            Uri dictUri = Uri.parse(dictPath);
+            Uri folderUri = Uri.parse(folderUriStr);
+            
+            // For content:// URIs (SAF), check if the dictionary URI starts with the folder URI
+            // This works because SAF URIs have a hierarchical structure
+            String dictUriStr = dictUri.toString();
+            
+            // The folder URI typically looks like: content://com.android.externalstorage.documents/tree/primary%3ADownload%2FDictionaries
+            // Dictionary URIs within it look like: content://com.android.externalstorage.documents/tree/primary%3ADownload%2FDictionaries/document/primary%3ADownload%2FDictionaries%2Fdict.mdx
+            
+            // Check if the dictionary URI contains the folder's tree ID
+            if (folderUriStr.contains("/tree/")) {
+                String treeId = folderUriStr.substring(folderUriStr.indexOf("/tree/") + 6);
+                // Remove any trailing slashes or document segments
+                if (treeId.contains("/document/")) {
+                    treeId = treeId.substring(0, treeId.indexOf("/document/"));
+                }
+                
+                // Check if the dictionary URI contains this tree ID
+                return dictUriStr.contains(treeId);
+            }
+            
+            // Fallback: simple prefix check
+            return dictUriStr.startsWith(folderUriStr);
+        } catch (Exception e) {
+            Log.w(TAG, "Error checking if path is within folder: " + dictPath, e);
+            return false;
+        }
     }
 
     /**
