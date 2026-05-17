@@ -548,7 +548,7 @@ public final class MDictDictionary implements Dictionary {
         // Normalise to the MDD convention: replace forward slashes with backslashes
         // and ensure there is a leading backslash.
         String key = resourcePath.replace('/', '\\');
-        if (key.isEmpty() || key.charAt(0) != '\\') {
+        if (!key.startsWith("\\")) {
             key = '\\' + key;
         }
         // Binary search using the same QUATERNARY comparator the keys are sorted by.

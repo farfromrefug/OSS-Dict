@@ -234,7 +234,7 @@ public class DictionaryFolderManager {
             if (SlobDescriptor.FORMAT_MDICT.equals(fileSet.format)) {
                 for (DocumentFile f : fileSet.files) {
                     String fn = f.getName();
-                    if (fn != null && fn.toLowerCase().endsWith(".mdd")) {
+                    if (fn != null && fn.toLowerCase(java.util.Locale.ROOT).endsWith(".mdd")) {
                         descriptor.mddPath = f.getUri().toString();
                         break;
                     }
