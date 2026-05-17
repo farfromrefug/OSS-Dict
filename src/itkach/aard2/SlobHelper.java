@@ -589,6 +589,8 @@ public final class SlobHelper {
      *   <li>Rank 0 – exact match (case-insensitive)</li>
      *   <li>Rank 1 – prefix / partial match</li>
      * </ul>
+     *
+     * @return 0 for an exact (case-insensitive) match, 1 for any other (prefix/partial) match
      */
     private static int matchRank(@NonNull String key, @NonNull String query) {
         return key.equalsIgnoreCase(query) ? 0 : 1;
@@ -603,6 +605,13 @@ public final class SlobHelper {
      * <p>Each incoming iterator is expected to yield its entries in "best-first"
      * order (exact matches before prefix matches), which is guaranteed by both the
      * Slob merge-sort and the binary-search iterators used by StarDict / MDict.</p>
+     *
+     * <p><b>Buffering:</b> Only the leading exact-match entries from each iterator are
+     * collected eagerly (typically 0–1 entries per dictionary for a normal query).
+     * The very first non-exact entry encountered per iterator is buffered as a single
+     * element list, and all subsequent entries remain lazily consumed through the
+     * original iterator.  Memory overhead is therefore O(exact_matches_per_dict),
+     * which is negligible in practice.</p>
      */
     @NonNull
     private static Iterator<DictionaryEntry> rankedInterleave(
