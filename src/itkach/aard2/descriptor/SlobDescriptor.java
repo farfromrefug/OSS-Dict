@@ -114,7 +114,7 @@ public class SlobDescriptor extends BaseDescriptor {
                     if (mddPath != null && !mddPath.isEmpty()) {
                         try {
                             Uri mddUri = Uri.parse(mddPath);
-                            MDictDictionary mdd = MDictDictionary.fromUri(context, mddUri, mddPath);
+                            MDictDictionary mdd = MDictDictionary.fromMddUri(context, mddUri, mddPath);
                             ((MDictDictionary) dict).setMdd(mdd);
                             Log.d(TAG, "Attached MDD resource file: " + mddPath);
                         } catch (Exception e) {
