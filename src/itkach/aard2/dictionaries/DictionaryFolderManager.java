@@ -8,6 +8,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
+import androidx.documentfile.provider.DocumentFile;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -228,6 +229,18 @@ public class DictionaryFolderManager {
             SlobDescriptor descriptor = new SlobDescriptor();
             descriptor.path = uri.toString();
             descriptor.format = fileSet.format;
+
+            // For MDict, find the first companion .mdd file (if any) from the file set
+            if (SlobDescriptor.FORMAT_MDICT.equals(fileSet.format)) {
+                for (DocumentFile f : fileSet.files) {
+                    String fn = f.getName();
+                    if (fn != null && fn.toLowerCase().endsWith(".mdd")) {
+                        descriptor.mddPath = f.getUri().toString();
+                        break;
+                    }
+                }
+            }
+
             descriptor.loadDictionary(context);
             
             // Check if dictionary with this ID already exists

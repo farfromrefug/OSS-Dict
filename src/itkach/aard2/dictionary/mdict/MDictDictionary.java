@@ -537,11 +537,20 @@ public final class MDictDictionary implements Dictionary {
     /**
      * Looks up a resource (image, CSS, etc.) by its path. Used when this
      * MDictDictionary instance represents an MDD file.
+     *
+     * <p>MDD keys are stored with a leading backslash (e.g. {@code \image.png}).
+     * HTML content may reference resources using forward slashes ({@code /image.png})
+     * or backslashes ({@code \image.png}). This method normalises the path before
+     * searching so both conventions work correctly.</p>
      */
     @Nullable
     DictionaryContent getResourceContent(@NonNull String resourcePath) {
-        // Normalise: strip leading backslash used by MDict
-        String key = resourcePath.startsWith("\\") ? resourcePath.substring(1) : resourcePath;
+        // Normalise to the MDD convention: replace forward slashes with backslashes
+        // and ensure there is a leading backslash.
+        String key = resourcePath.replace('/', '\\');
+        if (key.isEmpty() || key.charAt(0) != '\\') {
+            key = '\\' + key;
+        }
         // Binary search using the same QUATERNARY comparator the keys are sorted by.
         int idx = findStartIndex(key, Slob.Strength.QUATERNARY);
         if (idx < 0 || idx >= keys.size()
@@ -549,7 +558,10 @@ public final class MDictDictionary implements Dictionary {
         long offset = recordOffsets[idx];
         byte[] data = readRecord(offset);
         if (data == null) return null;
-        return new DictionaryContent(guessMimeType(key),
+        // Use the key without the leading backslash to guess the MIME type from
+        // the file extension (the backslash is not part of the filename itself).
+        String nameForMime = key.substring(1);
+        return new DictionaryContent(guessMimeType(nameForMime),
                 ByteBuffer.wrap(data));
     }
 

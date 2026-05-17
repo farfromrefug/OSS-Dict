@@ -39,6 +39,11 @@ public class SlobDescriptor extends BaseDescriptor {
     public static final String FORMAT_STARDICT_ARCHIVE = "stardict-archive";
 
     public String path;
+    /**
+     * Optional URI of a companion {@code .mdd} resource file for MDict dictionaries.
+     * {@code null} when there is no companion MDD file.
+     */
+    public String mddPath;
     public Map<String, String> tags = new HashMap<>();
     public boolean active = true;
     public long priority;
@@ -106,6 +111,16 @@ public class SlobDescriptor extends BaseDescriptor {
             switch (format) {
                 case FORMAT_MDICT:
                     dict = MDictDictionary.fromUri(context, uri, path);
+                    if (mddPath != null && !mddPath.isEmpty()) {
+                        try {
+                            Uri mddUri = Uri.parse(mddPath);
+                            MDictDictionary mdd = MDictDictionary.fromUri(context, mddUri, mddPath);
+                            ((MDictDictionary) dict).setMdd(mdd);
+                            Log.d(TAG, "Attached MDD resource file: " + mddPath);
+                        } catch (Exception e) {
+                            Log.w(TAG, "Failed to load MDD companion file: " + mddPath, e);
+                        }
+                    }
                     break;
                 case FORMAT_STARDICT:
                     dict = StarDictDictionary.fromIfoUri(context, uri, path);
@@ -156,6 +171,9 @@ public class SlobDescriptor extends BaseDescriptor {
                 break;
             case FORMAT_MDICT:
                 MDictDictionary.cleanupPersistedData(context, path);
+                if (mddPath != null && !mddPath.isEmpty()) {
+                    MDictDictionary.cleanupPersistedData(context, mddPath);
+                }
                 break;
             default:
                 // FORMAT_SLOB and FORMAT_STARDICT produce no persistent local data.
