@@ -64,6 +64,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     final static int POS_CLEAR_CACHE = 16;
     final static int POS_ABOUT = 17;
     final static int POS_OPEN_MISSING_BROWSER = 18;
+    final static int POS_SORT_BY_RANK = 19;
 
     SettingsListAdapter(Fragment fragment) {
         this.fragment = fragment;
@@ -84,7 +85,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
 
     @Override
     public int getItemCount() {
-        return 19;
+        return 20;
     }
 
     @Override
@@ -121,6 +122,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_REMOTE_CONTENT_CACHE:
             case POS_SHOW_KEYBOARD_LOOKUP:
             case POS_OPEN_MISSING_BROWSER:
+            case POS_SORT_BY_RANK:
                 view = LayoutInflater.from(parent.getContext()).inflate(R.layout.settings_switch, parent, false);
                 break;
             case POS_AUTO_LOAD_FOLDER:
@@ -200,6 +202,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
                 break;
             case POS_AUTO_MOVE_TO_FOLDER:
                 getAutoMoveToFolderView(holder);
+                break;
+            case POS_SORT_BY_RANK:
+                getSortByRankView(holder);
                 break;
         }
     }
@@ -345,6 +350,20 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         });
         view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
         toggle.setChecked(AppPrefs.openMissingInBrowser());
+    }
+
+    private void getSortByRankView(@NonNull ViewHolder holder) {
+        View view = holder.itemView;
+        MaterialSwitch toggle = view.findViewById(R.id.setting_switch);
+        toggle.setText(R.string.setting_sort_lookup_by_rank);
+        toggle.setOnClickListener(v -> {
+            boolean currentValue = AppPrefs.sortLookupResultsByRank();
+            boolean newValue = !currentValue;
+            AppPrefs.setSortLookupResultsByRank(newValue);
+            toggle.setChecked(newValue);
+        });
+        view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
+        toggle.setChecked(AppPrefs.sortLookupResultsByRank());
     }
     private void getAutoPasteView(@NonNull ViewHolder holder) {
         View view = holder.itemView;
