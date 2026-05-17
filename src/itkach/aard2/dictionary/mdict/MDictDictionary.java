@@ -65,7 +65,7 @@ public final class MDictDictionary implements Dictionary {
     private static final byte[] CACHE_MAGIC =
             new byte[]{'M', 'D', 'X', 'I', 'D', 'X', '\n', '\0'};
     /** Increment when the cache format changes to invalidate old caches. */
-    private static final int CACHE_VERSION = 1;
+    private static final int CACHE_VERSION = 2;
     /** Buffer size for cache I/O (64 KiB). */
     private static final int CACHE_BUFFER_SIZE = 65536;
 
@@ -166,6 +166,32 @@ public final class MDictDictionary implements Dictionary {
     public static MDictDictionary fromUri(@NonNull Context context,
                                           @NonNull Uri uri,
                                           @NonNull String filePath) throws IOException {
+        return fromUri(context, uri, filePath, false);
+    }
+
+    /**
+     * Opens an MDD resource file identified by a content {@link Uri}.
+     *
+     * <p>MDD files store resource-path keys in UTF-16LE regardless of what the
+     * header's {@code Encoding} attribute says (which typically mirrors the
+     * companion MDX encoding, e.g. "GBK" for Chinese dictionaries).
+     * This factory forces UTF-16LE key parsing so that the Key Block Info is
+     * decoded correctly.</p>
+     *
+     * @throws IOException if the file cannot be opened or is not a valid MDD.
+     */
+    @NonNull
+    public static MDictDictionary fromMddUri(@NonNull Context context,
+                                              @NonNull Uri uri,
+                                              @NonNull String filePath) throws IOException {
+        return fromUri(context, uri, filePath, true);
+    }
+
+    @NonNull
+    private static MDictDictionary fromUri(@NonNull Context context,
+                                            @NonNull Uri uri,
+                                            @NonNull String filePath,
+                                            boolean isMdd) throws IOException {
         ParcelFileDescriptor pfd = context.getContentResolver().openFileDescriptor(uri, "r");
         if (pfd == null) throw new IOException("Cannot open: " + filePath);
         FileInputStream fis = new FileInputStream(pfd.getFileDescriptor());
@@ -175,7 +201,7 @@ public final class MDictDictionary implements Dictionary {
         File cache = cacheFile(context, filePath);
         MDictDictionary dict = tryLoadFromCache(cache, channel, filePath);
         if (dict == null) {
-            dict = parse(channel, filePath);
+            dict = parse(channel, filePath, isMdd);
             saveToCache(cache, dict);
         }
         // Keep pfd and fis alive for the lifetime of the dictionary so that
@@ -188,6 +214,13 @@ public final class MDictDictionary implements Dictionary {
     @NonNull
     static MDictDictionary parse(@NonNull FileChannel channel,
                                   @NonNull String filePath) throws IOException {
+        return parse(channel, filePath, false);
+    }
+
+    @NonNull
+    static MDictDictionary parse(@NonNull FileChannel channel,
+                                  @NonNull String filePath,
+                                  boolean isMdd) throws IOException {
         ByteBuffer buf = ByteBuffer.allocate(4);
         buf.order(ByteOrder.BIG_ENDIAN);
 
@@ -255,7 +288,14 @@ public final class MDictDictionary implements Dictionary {
         // The format spec uses "UTF-16" (without the LE suffix) to mean UTF-16LE.
         String keyEncoding = tags.getOrDefault("encoding", "UTF-8");
         if (keyEncoding.isEmpty()) keyEncoding = "UTF-8";
-        final boolean keyIsUtf16le = "UTF-16LE".equalsIgnoreCase(keyEncoding)
+        // MDD resource files always store their keys (resource paths) in UTF-16LE
+        // regardless of what the header Encoding attribute says.  The Encoding
+        // field in an MDD header typically mirrors the companion MDX file (e.g.
+        // "GBK" for a Chinese dictionary).  Using the wrong encoding causes every
+        // KBI key-length field to be misinterpreted, which misaligns the rest of
+        // the Key Block Info and produces garbage compressed-block sizes.
+        final boolean keyIsUtf16le = isMdd
+                || "UTF-16LE".equalsIgnoreCase(keyEncoding)
                 || "UTF-16".equalsIgnoreCase(keyEncoding);
         final java.nio.charset.Charset keyCharset = keyIsUtf16le
                 ? StandardCharsets.UTF_16LE
@@ -537,11 +577,20 @@ public final class MDictDictionary implements Dictionary {
     /**
      * Looks up a resource (image, CSS, etc.) by its path. Used when this
      * MDictDictionary instance represents an MDD file.
+     *
+     * <p>MDD keys are stored with a leading backslash (e.g. {@code \image.png}).
+     * HTML content may reference resources using forward slashes ({@code /image.png})
+     * or backslashes ({@code \image.png}). This method normalises the path before
+     * searching so both conventions work correctly.</p>
      */
     @Nullable
     DictionaryContent getResourceContent(@NonNull String resourcePath) {
-        // Normalise: strip leading backslash used by MDict
-        String key = resourcePath.startsWith("\\") ? resourcePath.substring(1) : resourcePath;
+        // Normalise to the MDD convention: replace forward slashes with backslashes
+        // and ensure there is a leading backslash.
+        String key = resourcePath.replace('/', '\\');
+        if (!key.startsWith("\\")) {
+            key = '\\' + key;
+        }
         // Binary search using the same QUATERNARY comparator the keys are sorted by.
         int idx = findStartIndex(key, Slob.Strength.QUATERNARY);
         if (idx < 0 || idx >= keys.size()
@@ -549,7 +598,10 @@ public final class MDictDictionary implements Dictionary {
         long offset = recordOffsets[idx];
         byte[] data = readRecord(offset);
         if (data == null) return null;
-        return new DictionaryContent(guessMimeType(key),
+        // Use the key without the leading backslash to guess the MIME type from
+        // the file extension (the backslash is not part of the filename itself).
+        String nameForMime = key.substring(1);
+        return new DictionaryContent(guessMimeType(nameForMime),
                 ByteBuffer.wrap(data));
     }
 
