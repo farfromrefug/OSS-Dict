@@ -70,11 +70,16 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         this.context = fragment.requireActivity();
         this.userStylePrefs = context.getSharedPreferences("userStyles", Activity.MODE_PRIVATE);
         this.userStylePrefs.registerOnSharedPreferenceChangeListener(this);
-
+        AppPrefs.getPreferences().registerOnSharedPreferenceChangeListener(this);
         this.onDeleteUserStyle = view -> {
             String name = (String) view.getTag();
             deleteUserStyle(name);
         };
+    }
+
+    public void destroy() {
+        userStylePrefs.unregisterOnSharedPreferenceChangeListener(this);
+        itkach.aard2.prefs.AppPrefs.getPreferences().unregisterOnSharedPreferenceChangeListener(this);
     }
 
     @Override
@@ -482,7 +487,14 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     }
 
     @Override
-    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String s) {
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if ("autoLoadDictFolder".equals(key)) {
+            notifyItemChanged(POS_AUTO_LOAD_FOLDER);
+            notifyItemChanged(POS_AUTO_MOVE_TO_FOLDER);
+            return;
+        }
+
+        // For other prefs we fall back to full refresh
         notifyDataSetChanged();
     }
 
