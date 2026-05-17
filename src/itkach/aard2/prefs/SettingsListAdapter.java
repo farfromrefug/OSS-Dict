@@ -45,39 +45,46 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     private final View.OnClickListener onDeleteUserStyle;
     private final Fragment fragment;
 
-    final static int POS_UI_THEME = 0;
-    final static int POS_FORCE_DARK = 1;
-    final static int POS_REMOTE_CONTENT = 2;
-    final static int POS_REMOTE_CONTENT_CACHE = 3;
-    final static int POS_FAV_RANDOM = 4;
-    final static int POS_USE_VOLUME_FOR_NAV = 5;
-    final static int POS_SHOW_KEYBOARD_LOOKUP = 6;
-    final static int POS_AUTO_PASTE = 7;
-    final static int POS_DISABLE_RANDOM_LOOKUP = 8;
-    final static int POS_DISABLE_BOOKMARKS = 9;
-    final static int POS_DISABLE_HISTORY = 10;
-    final static int POS_DISABLE_TAB_LABELS = 11;
-    final static int POS_DISABLE_JS = 12;
-    final static int POS_USER_STYLES = 13;
-    final static int POS_CLEAR_CACHE = 14;
-    final static int POS_ABOUT = 15;
-    final static int POS_OPEN_MISSING_BROWSER = 16;
+    final static int POS_AUTO_LOAD_FOLDER = 0;
+    final static int POS_AUTO_MOVE_TO_FOLDER = 1;
+    final static int POS_UI_THEME = 2;
+    final static int POS_FORCE_DARK = 3;
+    final static int POS_REMOTE_CONTENT = 4;
+    final static int POS_REMOTE_CONTENT_CACHE = 5;
+    final static int POS_FAV_RANDOM = 6;
+    final static int POS_USE_VOLUME_FOR_NAV = 7;
+    final static int POS_SHOW_KEYBOARD_LOOKUP = 8;
+    final static int POS_AUTO_PASTE = 9;
+    final static int POS_DISABLE_RANDOM_LOOKUP = 10;
+    final static int POS_DISABLE_BOOKMARKS = 11;
+    final static int POS_DISABLE_HISTORY = 12;
+    final static int POS_DISABLE_TAB_LABELS = 13;
+    final static int POS_DISABLE_JS = 14;
+    final static int POS_USER_STYLES = 15;
+    final static int POS_CLEAR_CACHE = 16;
+    final static int POS_ABOUT = 17;
+    final static int POS_OPEN_MISSING_BROWSER = 18;
 
     SettingsListAdapter(Fragment fragment) {
         this.fragment = fragment;
         this.context = fragment.requireActivity();
         this.userStylePrefs = context.getSharedPreferences("userStyles", Activity.MODE_PRIVATE);
         this.userStylePrefs.registerOnSharedPreferenceChangeListener(this);
-
+        AppPrefs.getPreferences().registerOnSharedPreferenceChangeListener(this);
         this.onDeleteUserStyle = view -> {
             String name = (String) view.getTag();
             deleteUserStyle(name);
         };
     }
 
+    public void destroy() {
+        userStylePrefs.unregisterOnSharedPreferenceChangeListener(this);
+        itkach.aard2.prefs.AppPrefs.getPreferences().unregisterOnSharedPreferenceChangeListener(this);
+    }
+
     @Override
     public int getItemCount() {
-        return 17;
+        return 19;
     }
 
     @Override
@@ -104,6 +111,7 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_FORCE_DARK:
             case POS_FAV_RANDOM:
             case POS_USE_VOLUME_FOR_NAV:
+            case POS_AUTO_MOVE_TO_FOLDER:
             case POS_AUTO_PASTE:
             case POS_DISABLE_BOOKMARKS:
             case POS_DISABLE_HISTORY:
@@ -114,6 +122,9 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
             case POS_SHOW_KEYBOARD_LOOKUP:
             case POS_OPEN_MISSING_BROWSER:
                 view = LayoutInflater.from(parent.getContext()).inflate(R.layout.settings_switch, parent, false);
+                break;
+            case POS_AUTO_LOAD_FOLDER:
+                view = LayoutInflater.from(parent.getContext()).inflate(R.layout.settings_auto_load_folder_item, parent, false);
                 break;
             case POS_USER_STYLES:
                 view = LayoutInflater.from(parent.getContext()).inflate(R.layout.settings_user_styles_item, parent, false);
@@ -183,6 +194,12 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
                 break;
             case POS_ABOUT:
                 getAboutView(holder);
+                break;
+            case POS_AUTO_LOAD_FOLDER:
+                getAutoLoadFolderView(holder);
+                break;
+            case POS_AUTO_MOVE_TO_FOLDER:
+                getAutoMoveToFolderView(holder);
                 break;
         }
     }
@@ -272,6 +289,33 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         });
         view.findViewById(R.id.setting_subtitle).setVisibility(View.GONE);
         toggle.setChecked(AppPrefs.useVolumeKeysForNavigation());
+    }
+    
+    private void getAutoMoveToFolderView(@NonNull ViewHolder holder) {
+        View view = holder.itemView;
+        MaterialSwitch toggle = view.findViewById(R.id.setting_switch);
+        toggle.setText(R.string.setting_auto_move_to_folder);
+        
+        // Only enable if auto-load folder is set
+        String folderUri = AppPrefs.getAutoLoadDictFolderUri();
+        toggle.setEnabled(!folderUri.isEmpty());
+        
+        toggle.setOnClickListener(v -> {
+            boolean currentValue = AppPrefs.autoMoveToFolder();
+            boolean newValue = !currentValue;
+            AppPrefs.setAutoMoveToFolder(newValue);
+            toggle.setChecked(newValue);
+        });
+        
+        TextView subtitle = view.findViewById(R.id.setting_subtitle);
+        if (folderUri.isEmpty()) {
+            subtitle.setVisibility(View.VISIBLE);
+            subtitle.setText(R.string.setting_auto_move_to_folder_subtitle_disabled);
+        } else {
+            subtitle.setVisibility(View.GONE);
+        }
+        
+        toggle.setChecked(AppPrefs.autoMoveToFolder());
     }
 
     private void getShowKeyboarOnLookupView(@NonNull ViewHolder holder) {
@@ -443,7 +487,14 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
     }
 
     @Override
-    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String s) {
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if ("autoLoadDictFolder".equals(key)) {
+            notifyItemChanged(POS_AUTO_LOAD_FOLDER);
+            notifyItemChanged(POS_AUTO_MOVE_TO_FOLDER);
+            return;
+        }
+
+        // For other prefs we fall back to full refresh
         notifyDataSetChanged();
     }
 
@@ -518,6 +569,52 @@ public class SettingsListAdapter extends RecyclerView.Adapter<SettingsListAdapte
         TextView versionView = view.findViewById(R.id.application_version);
         versionView.setText(context.getString(R.string.application_version, versionName));
 
+    }
+
+    private void getAutoLoadFolderView(@NonNull ViewHolder holder) {
+        View view = holder.itemView;
+        MaterialCardView card = view.findViewById(R.id.card_view);
+        card.setCardBackgroundColor(SurfaceColors.SURFACE_1.getColor(context));
+        
+        MaterialTextView title = view.findViewById(R.id.title);
+        MaterialTextView subtitle = view.findViewById(R.id.subtitle);
+        MaterialButton selectButton = view.findViewById(R.id.select_folder_button);
+        MaterialButton clearButton = view.findViewById(R.id.clear_folder_button);
+        
+        title.setText(R.string.setting_auto_load_folder);
+        
+        String folderUri = AppPrefs.getAutoLoadDictFolderUri();
+        if (folderUri.isEmpty()) {
+            subtitle.setText(R.string.setting_auto_load_folder_subtitle);
+            clearButton.setVisibility(View.GONE);
+        } else {
+            subtitle.setText(folderUri);
+            clearButton.setVisibility(View.VISIBLE);
+        }
+        
+        selectButton.setOnClickListener(v -> {
+            if (fragment instanceof SettingsFragment) {
+                ((SettingsFragment) fragment).selectAutoLoadFolder();
+            }
+        });
+        
+        clearButton.setOnClickListener(v -> {
+            // Show confirmation dialog
+            new MaterialAlertDialogBuilder(context)
+                    .setTitle(R.string.dialog_clear_auto_load_folder_title)
+                    .setMessage(R.string.dialog_clear_auto_load_folder_message)
+                    .setPositiveButton(R.string.action_clear, (dialog, which) -> {
+                        // Clear the folder using the ViewModel/Manager
+                        if (fragment instanceof SettingsFragment) {
+                            ((SettingsFragment) fragment).clearAutoLoadFolder();
+                        }
+                        // Refresh both settings
+                        notifyItemChanged(POS_AUTO_LOAD_FOLDER);
+                        notifyItemChanged(POS_AUTO_MOVE_TO_FOLDER);
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+        });
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {

@@ -136,7 +136,8 @@ public class DictionaryListAdapter extends RecyclerView.Adapter<DictionaryListAd
         holder.toggleDetailsBtn.setIconResource(toggleIcon);
         holder.toggleDetailsBtn.setOnClickListener(v -> {
             desc.expandDetail = !desc.expandDetail;
-            data.set(position, desc);
+            // Just notify this item changed, don't save to disk
+            notifyItemChanged(position);
         });
 
         // Favourite button

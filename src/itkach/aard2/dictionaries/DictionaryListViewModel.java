@@ -4,9 +4,11 @@ import android.app.Application;
 import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.MutableLiveData;
 
@@ -65,6 +67,10 @@ public class DictionaryListViewModel extends AndroidViewModel {
             // Signal that loading has started (before any blocking I/O begins).
             loadingCount.addAndGet(selection.size());
             isLoading.postValue(true);
+            
+            // Check if auto-move is enabled and folder is set
+            boolean shouldShowMoveHint = itkach.aard2.prefs.AppPrefs.autoMoveToFolder() 
+                    && !itkach.aard2.prefs.AppPrefs.getAutoLoadDictFolderUri().isEmpty();
 
             for (Uri uri : selection) {
                 try {
@@ -80,6 +86,15 @@ public class DictionaryListViewModel extends AndroidViewModel {
                         isLoading.postValue(false);
                     }
                 }
+            }
+            
+            // Show hint about moving files if enabled
+            if (shouldShowMoveHint && selection.size() > 0) {
+                itkach.aard2.utils.ThreadUtils.postOnMainThread(() -> {
+                    android.widget.Toast.makeText(getApplication(), 
+                            itkach.aard2.R.string.msg_move_to_auto_load_folder_hint,
+                            android.widget.Toast.LENGTH_LONG).show();
+                });
             }
         });
     }
@@ -135,6 +150,60 @@ public class DictionaryListViewModel extends AndroidViewModel {
                     history.notifyDataSetChanged();
                     bookmarks.notifyDataSetChanged();
                 });
+            }
+        });
+    }
+
+    /**
+     * Sets the auto-load folder and triggers a scan with progress notifications.
+     */
+    public void setAutoLoadFolder(@NonNull Uri folderUri) {
+        DictionaryScanNotification notification = new DictionaryScanNotification(getApplication());
+        
+        DictionaryFolderManager.getInstance(getApplication()).setAutoLoadFolder(
+                folderUri,
+                // Loading callback
+                isLoading -> {
+                    if (isLoading) {
+                        loadingCount.incrementAndGet();
+                        this.isLoading.postValue(true);
+                    } else {
+                        if (loadingCount.decrementAndGet() == 0) {
+                            this.isLoading.postValue(false);
+                        }
+                    }
+                },
+                // Progress callback
+                new DictionaryFolderManager.ProgressCallback() {
+                    @Override
+                    public void onScanStarted() {
+                        notification.showScanStarted();
+                    }
+
+                    @Override
+                    public void onDictionaryLoading(String dictionaryName, int current, int total) {
+                        notification.updateProgress(dictionaryName, current, total);
+                    }
+
+                    @Override
+                    public void onScanCompleted(int addedCount, int removedCount) {
+                        notification.showCompleted(addedCount, removedCount);
+                    }
+                });
+    }
+    
+    /**
+     * Clears the auto-load folder and removes all auto-loaded dictionaries.
+     */
+    public void clearAutoLoadFolder() {
+        DictionaryFolderManager.getInstance(getApplication()).clearAutoLoadFolder(isLoading -> {
+            if (isLoading) {
+                loadingCount.incrementAndGet();
+                this.isLoading.postValue(true);
+            } else {
+                if (loadingCount.decrementAndGet() == 0) {
+                    this.isLoading.postValue(false);
+                }
             }
         });
     }

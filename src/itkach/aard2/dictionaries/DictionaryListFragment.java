@@ -3,10 +3,15 @@ package itkach.aard2.dictionaries;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -14,12 +19,14 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProvider;
 import android.text.Spanned;
 import androidx.core.text.HtmlCompat;
 import android.widget.TextView;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 
 import itkach.aard2.BaseListFragment;
@@ -27,6 +34,7 @@ import itkach.aard2.MainActivity;
 import itkach.aard2.R;
 import itkach.aard2.SlobHelper;
 import itkach.aard2.descriptor.SlobDescriptor;
+import itkach.aard2.prefs.AppPrefs;
 
 public class DictionaryListFragment extends BaseListFragment {
     private final static String TAG = DictionaryListFragment.class.getSimpleName();
@@ -56,6 +64,62 @@ public class DictionaryListFragment extends BaseListFragment {
                     return;
                 }
                 viewModel.updateDictionary(uri);
+            });
+
+    @Nullable private Uri pendingAutoLoadUri;
+    private final ActivityResultLauncher<String> requestNotificationPermission =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    if (pendingAutoLoadUri != null) {
+                        viewModel.setAutoLoadFolder(pendingAutoLoadUri);
+                        pendingAutoLoadUri = null;
+                        Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(requireActivity(), R.string.msg_permission_denied_notifications, Toast.LENGTH_LONG).show();
+                    pendingAutoLoadUri = null;
+                }
+            });
+
+    private final ActivityResultLauncher<Intent> folderSelector = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result == null || result.getResultCode() != android.app.Activity.RESULT_OK) {
+                    return;
+                }
+                android.content.Intent intent = result.getData();
+                if (intent == null) {
+                    return;
+                }
+                Uri uri = intent.getData();
+                if (uri == null) {
+                    return;
+                }
+                // If API < 33 we don't need runtime POST_NOTIFICATIONS permission
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+                    viewModel.setAutoLoadFolder(uri);
+                    Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // For API 33+, check permission
+                if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.POST_NOTIFICATIONS)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    viewModel.setAutoLoadFolder(uri);
+                    Toast.makeText(requireActivity(), R.string.msg_folder_selected, Toast.LENGTH_SHORT).show();
+                } else {
+                    // store the uri and request permission; on grant we'll call setAutoLoadFolder
+                    pendingAutoLoadUri = uri;
+
+                    // Optionally show rationale
+                    if (shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS)) {
+                        Snackbar.make(requireView(), R.string.rationale_notifications_needed, Snackbar.LENGTH_LONG)
+                                .setAction(R.string.action_allow, v -> requestNotificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS))
+                                .show();
+                    } else {
+                        requestNotificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS);
+                    }
+                }
             });
 
     @DrawableRes
@@ -88,6 +152,37 @@ public class DictionaryListFragment extends BaseListFragment {
         DictionaryListAdapter listAdapter = new DictionaryListAdapter(SlobHelper.getInstance().dictionaries, this);
         recyclerView.setAdapter(listAdapter);
 
+        // Add a button to select auto-load folder in empty view
+        View container = emptyView.findViewById(R.id.container);
+        if (container instanceof ViewGroup) {
+            ViewGroup containerGroup = (ViewGroup) container;
+            
+            // Check if button doesn't already exist
+            View existingButton = emptyView.findViewWithTag("select_folder_button");
+            if (existingButton == null) {
+                // Create button programmatically
+                MaterialButton selectFolderButton = new MaterialButton(requireContext());
+                selectFolderButton.setText(R.string.action_select_dictionary_folder);
+                selectFolderButton.setTag("select_folder_button");
+                selectFolderButton.setOnClickListener(v -> selectDictionaryFolder());
+                
+                // Add some margin and center the button
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+                params.topMargin = (int) (24 * getResources().getDisplayMetrics().density);
+                selectFolderButton.setLayoutParams(params);
+                
+                // Center the button by setting gravity on the parent if it's a LinearLayout
+                if (containerGroup instanceof LinearLayout) {
+                    ((LinearLayout) containerGroup).setGravity(Gravity.CENTER_HORIZONTAL);
+                }
+                
+                containerGroup.addView(selectFolderButton);
+            }
+        }
+
 
         // find header (in the fragment_list layout)
         formatsHeader = view.findViewById(R.id.formats_header);
@@ -119,9 +214,19 @@ public class DictionaryListFragment extends BaseListFragment {
         viewModel.isLoading.observe(getViewLifecycleOwner(), loading -> {
             if (Boolean.TRUE.equals(loading)) {
                 if (loadingSnackbar == null || !loadingSnackbar.isShown()) {
-                    loadingSnackbar = Snackbar.make(view,
+                    // Use the root view for snackbar to ensure it's always attached
+                    View rootView = view;
+                    loadingSnackbar = Snackbar.make(rootView,
                             R.string.msg_loading_dictionary,
                             Snackbar.LENGTH_INDEFINITE);
+                    // Set anchor to FAB if available to position above it
+                    FragmentActivity activity = requireActivity();
+                    if (activity instanceof MainActivity) {
+                        View fab = activity.findViewById(R.id.fab);
+                        if (fab != null && fab.getVisibility() == View.VISIBLE) {
+                            loadingSnackbar.setAnchorView(fab);
+                        }
+                    }
                     loadingSnackbar.show();
                 }
             } else {
@@ -174,6 +279,17 @@ public class DictionaryListFragment extends BaseListFragment {
         intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         try {
             dictionarySelector.launch(intent);
+        } catch (ActivityNotFoundException e) {
+            Log.d(TAG, "Not activity to get content", e);
+            Toast.makeText(getContext(), R.string.msg_no_activity_to_get_content, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    public void selectDictionaryFolder() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try {
+            folderSelector.launch(intent);
         } catch (ActivityNotFoundException e) {
             Log.d(TAG, "Not activity to get content", e);
             Toast.makeText(getContext(), R.string.msg_no_activity_to_get_content, Toast.LENGTH_LONG).show();

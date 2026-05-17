@@ -51,7 +51,7 @@ public abstract class BaseDescriptorList<T extends BaseDescriptor> extends Abstr
         }
     }
 
-    protected void notifyChanged() {
+    public void notifyChanged() {
         if (this.updating == 0) {
             this.dataSetObservable.notifyChanged();
         }
@@ -77,6 +77,10 @@ public abstract class BaseDescriptorList<T extends BaseDescriptor> extends Abstr
     @Override
     public int size() {
         return list.size();
+    }
+
+    public List<T> getList() {
+        return list;
     }
 
     @Override

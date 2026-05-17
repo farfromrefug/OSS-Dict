@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 
 import itkach.aard2.article.ArticleCollectionActivity;
+import itkach.aard2.dictionaries.DictionaryFolderManager;
 import itkach.aard2.dictionary.DictionaryEntry;
 import itkach.aard2.lookup.LookupListener;
 import itkach.aard2.prefs.AppPrefs;
@@ -72,7 +73,14 @@ public class Application extends android.app.Application {
             }
         });
 
-        ThreadUtils.postOnBackgroundThread(() -> slobHelper.init());
+        ThreadUtils.postOnBackgroundThread(() -> {
+            slobHelper.init();
+            // After init, scan auto-load folder if configured
+            String folderUri = AppPrefs.getAutoLoadDictFolderUri();
+            if (!folderUri.isEmpty()) {
+                DictionaryFolderManager.getInstance(this).scanAndSync(null);
+            }
+        });
     }
 
     private void setLookupResult(@NonNull String query, Iterator<DictionaryEntry> data) {
