@@ -150,4 +150,14 @@ public class AppPrefs extends Prefs {
     public static void setAutoMoveToFolder(boolean autoMove) {
         getInstance().prefs.edit().putBoolean(PREF_AUTO_MOVE_TO_FOLDER, autoMove).apply();
     }
+
+    private static final String PREF_SORT_LOOKUP_BY_RANK = "sortLookupByRank";
+
+    public static boolean sortLookupResultsByRank() {
+        return getInstance().prefs.getBoolean(PREF_SORT_LOOKUP_BY_RANK, true);
+    }
+
+    public static void setSortLookupResultsByRank(boolean value) {
+        getInstance().prefs.edit().putBoolean(PREF_SORT_LOOKUP_BY_RANK, value).apply();
+    }
 }

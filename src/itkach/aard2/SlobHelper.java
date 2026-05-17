@@ -546,7 +546,9 @@ public final class SlobHelper {
             }
         }
 
-        final Iterator<DictionaryEntry> chain = chainIterators(allIters);
+        final Iterator<DictionaryEntry> chain = AppPrefs.sortLookupResultsByRank()
+                ? rankedInterleave(key, allIters)
+                : chainIterators(allIters);
         Log.d(TAG, String.format("find ran in %dms", System.currentTimeMillis() - t0));
 
         // Wrap in PeekableEntryIterator
@@ -578,6 +580,70 @@ public final class SlobHelper {
                 return chain.next();
             }
         };
+    }
+
+    /**
+     * Computes the match rank of a dictionary-entry key against the search query.
+     * Lower rank means a better match.
+     * <ul>
+     *   <li>Rank 0 – exact match (case-insensitive)</li>
+     *   <li>Rank 1 – prefix / partial match</li>
+     * </ul>
+     */
+    private static int matchRank(@NonNull String key, @NonNull String query) {
+        return key.equalsIgnoreCase(query) ? 0 : 1;
+    }
+
+    /**
+     * Interleaves results from multiple dictionary iterators so that
+     * exact matches (rank 0) from <em>all</em> dictionaries are emitted before any
+     * prefix / partial matches (rank 1), while preserving dictionary order within
+     * each rank group.
+     *
+     * <p>Each incoming iterator is expected to yield its entries in "best-first"
+     * order (exact matches before prefix matches), which is guaranteed by both the
+     * Slob merge-sort and the binary-search iterators used by StarDict / MDict.</p>
+     */
+    @NonNull
+    private static Iterator<DictionaryEntry> rankedInterleave(
+            @NonNull String query,
+            @NonNull List<Iterator<DictionaryEntry>> iters) {
+
+        List<List<DictionaryEntry>> exactPerIter = new ArrayList<>(iters.size());
+        List<Iterator<DictionaryEntry>> remainingPerIter = new ArrayList<>(iters.size());
+
+        for (Iterator<DictionaryEntry> iter : iters) {
+            List<DictionaryEntry> exact = new ArrayList<>();
+            List<DictionaryEntry> nonExactBuffer = new ArrayList<>();
+
+            while (iter.hasNext()) {
+                DictionaryEntry entry = iter.next();
+                if (matchRank(entry.key, query) == 0) {
+                    exact.add(entry);
+                } else {
+                    // First non-exact entry: buffer it and stop draining
+                    nonExactBuffer.add(entry);
+                    break;
+                }
+            }
+
+            exactPerIter.add(exact);
+
+            // Remaining for this dict = the buffered non-exact entry + rest of the iterator
+            List<Iterator<DictionaryEntry>> parts = new ArrayList<>(2);
+            if (!nonExactBuffer.isEmpty()) parts.add(nonExactBuffer.iterator());
+            parts.add(iter);
+            remainingPerIter.add(chainIterators(parts));
+        }
+
+        // Result: all exact matches (in dict order), then all non-exact matches (in dict order)
+        List<Iterator<DictionaryEntry>> allPhases = new ArrayList<>(iters.size() * 2);
+        for (List<DictionaryEntry> exactList : exactPerIter) {
+            allPhases.add(exactList.iterator());
+        }
+        allPhases.addAll(remainingPerIter);
+
+        return chainIterators(allPhases);
     }
 
     /** Simple chain of iterators: exhausts them in order. */
